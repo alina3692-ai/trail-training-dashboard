@@ -1,0 +1,1718 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trail Training Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --bg: #F7F6F3;
+    --surface: #FFFFFF;
+    --surface2: #F0EEE9;
+    --border: #E2DED6;
+    --border2: #CCC8BF;
+    --text: #1A1814;
+    --text2: #6B6760;
+    --text3: #A09D99;
+    --green: #2D6A2D;
+    --green-bg: #EAF3E0;
+    --orange: #C45C1A;
+    --orange-bg: #FAECE7;
+    --blue: #1A5FA8;
+    --blue-bg: #E6F1FB;
+    --purple: #4B3B9E;
+    --purple-bg: #EEEDFE;
+    --amber: #8C5A0A;
+    --amber-bg: #FDF3DC;
+    --red: #A32D2D;
+    --red-bg: #FAECEC;
+    --radius: 10px;
+    --radius-lg: 14px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141210;
+      --surface: #1E1C19;
+      --surface2: #272420;
+      --border: #2E2B27;
+      --border2: #3D3A35;
+      --text: #F0EDE8;
+      --text2: #9E9B96;
+      --text3: #6B6860;
+      --green: #5CA85C;
+      --green-bg: #1A2E1A;
+      --orange: #E07840;
+      --orange-bg: #2E1A10;
+      --blue: #5B9EE0;
+      --blue-bg: #101E30;
+      --purple: #8B7EDE;
+      --purple-bg: #1A1530;
+      --amber: #D4A040;
+      --amber-bg: #2A1E08;
+      --red: #D05050;
+      --red-bg: #2A1010;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: var(--bg); color: var(--text); font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif; font-size: 15px; line-height: 1.5; }
+  body { max-width: 900px; margin: 0 auto; padding: 0 16px 80px; }
+
+  /* ── TOP BAR ── */
+  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 20px 0 16px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+  .topbar-left h1 { font-size: 18px; font-weight: 600; letter-spacing: -0.3px; }
+  .topbar-left p { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .cd-box { background: var(--orange-bg); border-radius: var(--radius); padding: 8px 14px; text-align: right; }
+  .cd-num { font-size: 24px; font-weight: 700; color: var(--orange); line-height: 1; }
+  .cd-lbl { font-size: 10px; color: var(--orange); margin-top: 2px; opacity: .8; }
+
+  /* ── TABS ── */
+  .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 20px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .tab { padding: 9px 16px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; background: none; color: var(--text2); border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; transition: color .15s; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--text); border-bottom-color: var(--text); }
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* ── SECTION TITLE ── */
+  .sec-title { font-size: 11px; font-weight: 600; color: var(--text3); letter-spacing: .07em; text-transform: uppercase; margin-bottom: 10px; }
+
+  /* ── METRIC CARDS ── */
+  .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 8px; margin-bottom: 20px; }
+  .metric-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 13px; box-shadow: var(--shadow); }
+  .metric-label { font-size: 11px; color: var(--text2); margin-bottom: 4px; }
+  .metric-value { font-size: 22px; font-weight: 600; color: var(--text); line-height: 1.1; }
+  .metric-value span { font-size: 13px; font-weight: 400; color: var(--text2); }
+  .metric-sub { font-size: 11px; color: var(--text3); margin-top: 3px; }
+
+  /* ── AI BOX ── */
+  .ai-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; margin-bottom: 16px; box-shadow: var(--shadow); }
+  .ai-label { display: flex; align-items: center; gap: 7px; font-size: 11px; color: var(--text2); margin-bottom: 10px; }
+  .ai-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+  .ai-box p { font-size: 14px; line-height: 1.75; color: var(--text); }
+  .ai-box p + p { margin-top: 8px; }
+  .tags { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 5px; }
+  .tag { font-size: 11px; padding: 3px 9px; border-radius: 20px; font-weight: 500; }
+  .tag-warn { background: var(--amber-bg); color: var(--amber); }
+  .tag-ok { background: var(--green-bg); color: var(--green); }
+  .tag-info { background: var(--blue-bg); color: var(--blue); }
+  .tag-alert { background: var(--red-bg); color: var(--red); }
+
+  /* ── QUICK ACTIONS ── */
+  .quick-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+  .btn-ghost { background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 7px 13px; border-radius: var(--radius); font-size: 13px; cursor: pointer; transition: background .15s; }
+  .btn-ghost:hover { background: var(--surface2); }
+  .btn-primary { background: var(--text); color: var(--bg); border: none; padding: 9px 18px; border-radius: var(--radius); font-size: 13px; font-weight: 600; cursor: pointer; }
+  .btn-primary:hover { opacity: .85; }
+
+  /* ── CALENDAR ── */
+  .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .cal-nav-btns { display: flex; gap: 6px; }
+  .cal-nav-btns button { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 5px 12px; font-size: 13px; cursor: pointer; color: var(--text); }
+  .cal-title { font-size: 15px; font-weight: 600; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-bottom: 12px; }
+  .cal-dn { text-align: center; font-size: 10px; color: var(--text3); padding: 4px 0 6px; font-weight: 500; }
+  .cal-cell { min-height: 68px; border-radius: 8px; padding: 5px 6px; border: 1px solid var(--border); background: var(--surface); cursor: default; transition: background .1s; }
+  .cal-cell.empty { background: none; border-color: transparent; }
+  .cal-cell.today { border-color: var(--text); border-width: 1.5px; }
+  .cal-cell.c-target { border-color: var(--orange); background: var(--orange-bg); }
+  .cal-cell.c-tune { border-color: var(--blue); background: var(--blue-bg); }
+  .cal-cell.c-trail { border-color: var(--green); background: var(--green-bg); }
+  .cal-cell.c-run { border-color: var(--blue); background: var(--blue-bg); }
+  .cal-cell.c-class { border-color: var(--purple); background: var(--purple-bg); }
+  .cal-cell.c-strength { border-color: var(--amber); background: var(--amber-bg); }
+  .cal-cell.c-swim { border-color: #0E7490; background: #ECFEFF; }
+  .cal-cell.c-cycle { border-color: #6B4A9E; background: #F3F0FF; }
+  .cal-dn-num { font-size: 11px; font-weight: 500; color: var(--text2); }
+  .cal-cell.today .cal-dn-num { color: var(--text); font-weight: 700; }
+  .cal-dist { font-size: 13px; font-weight: 600; color: var(--text); margin-top: 2px; }
+  .cal-type-label { font-size: 9px; color: var(--text2); }
+  .cal-race-lbl { font-size: 9px; font-weight: 600; color: var(--orange); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cal-tune-lbl { font-size: 9px; font-weight: 600; color: var(--blue); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cal-rest { font-size: 10px; color: var(--text3); margin-top: 6px; }
+  .cal-tss { font-size: 9px; color: var(--text3); }
+  .month-sum { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 20px; }
+  .ms-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; text-align: center; }
+  .ms-val { font-size: 17px; font-weight: 600; }
+  .ms-lbl { font-size: 10px; color: var(--text3); margin-top: 2px; }
+
+  /* ── DIVIDER ── */
+  .divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+  /* ── INPUT ── */
+  .week-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 16px; margin-bottom: 16px; box-shadow: var(--shadow); }
+  .ig { display: grid; gap: 8px; }
+  .ig-4 { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
+  .ig-3 { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
+  .ig-2 { grid-template-columns: 1fr 1fr; }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 11px; color: var(--text2); font-weight: 500; }
+  .field input, .field select, .field textarea {
+    font-size: 13px; padding: 7px 10px;
+    border-radius: var(--radius); border: 1px solid var(--border);
+    background: var(--bg); color: var(--text); width: 100%;
+    transition: border-color .15s;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus {
+    outline: none; border-color: var(--text2);
+  }
+  .field textarea { resize: vertical; line-height: 1.5; }
+
+  .day-card { border: 1px solid var(--border); border-radius: var(--radius-lg); margin-bottom: 8px; overflow: hidden; box-shadow: var(--shadow); }
+  .day-hdr { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--surface2); cursor: pointer; user-select: none; }
+  .day-hdr:hover { background: var(--border); }
+  .day-hdr-left { display: flex; align-items: center; gap: 10px; }
+  .day-lbl { font-size: 13px; font-weight: 600; min-width: 28px; }
+  .day-date { font-size: 11px; color: var(--text2); }
+  .d-badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 500; }
+  .db-rest { background: var(--surface); color: var(--text3); border: 1px solid var(--border); }
+  .db-trail { background: var(--green-bg); color: var(--green); }
+  .db-run { background: var(--blue-bg); color: var(--blue); }
+  .db-class { background: var(--purple-bg); color: var(--purple); }
+  .db-str { background: var(--amber-bg); color: var(--amber); }
+  .db-swim { background: #ECFEFF; color: #0E7490; }
+  .db-cycle { background: #F3F0FF; color: #6B4A9E; }
+  .db-double { background: var(--orange-bg); color: var(--orange); }
+  .chevron { font-size: 11px; color: var(--text3); transition: transform .2s; }
+  .chevron.open { transform: rotate(180deg); }
+  .day-body { padding: 14px; display: none; }
+  .day-body.open { display: block; }
+
+  .vitals-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+
+  .sess-block { border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; margin-bottom: 10px; background: var(--bg); }
+  .sess-hdr { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .sess-lbl { font-size: 11px; font-weight: 600; color: var(--text3); letter-spacing: .05em; }
+  .type-sel { font-size: 12px; padding: 4px 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); }
+  .plan-exec { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .plan-col, .exec-col { display: flex; flex-direction: column; gap: 7px; }
+  .col-lbl { font-size: 10px; font-weight: 700; color: var(--text3); letter-spacing: .07em; text-transform: uppercase; padding-bottom: 5px; border-bottom: 1px solid var(--border); margin-bottom: 2px; }
+  .rpe-row { display: flex; align-items: center; gap: 8px; }
+  .rpe-row input[type=range] { flex: 1; accent-color: var(--text); }
+  .rpe-num { font-size: 14px; font-weight: 700; min-width: 20px; text-align: right; }
+  .comp-row { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+  .comp-bar-wrap { display: flex; align-items: center; gap: 8px; margin-top: 5px; }
+  .comp-track { flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .comp-fill { height: 100%; border-radius: 3px; transition: width .3s, background .3s; }
+  .comp-tag { font-size: 11px; font-weight: 600; }
+  .comp-tag.full { color: var(--green); }
+  .comp-tag.partial { color: var(--amber); }
+  .comp-tag.low { color: var(--red); }
+  .class-note { background: var(--purple-bg); border-radius: var(--radius); padding: 8px 11px; font-size: 11px; color: var(--purple); margin-bottom: 10px; font-weight: 500; }
+  .add-sess-btn { display: flex; align-items: center; gap: 6px; background: none; border: 1px dashed var(--border2); color: var(--text2); padding: 8px 14px; border-radius: var(--radius); font-size: 12px; cursor: pointer; width: 100%; justify-content: center; margin-bottom: 10px; }
+  .add-sess-btn:hover { background: var(--surface2); }
+  .feeling-row { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+
+  .totals-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 16px; margin-top: 12px; box-shadow: var(--shadow); }
+  .totals-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(88px, 1fr)); gap: 7px; margin-bottom: 12px; }
+  .tc { background: var(--surface2); border-radius: var(--radius); padding: 9px 10px; text-align: center; }
+  .tc-val { font-size: 17px; font-weight: 600; }
+  .tc-lbl { font-size: 10px; color: var(--text3); margin-top: 2px; }
+
+  /* ── TRENDS ── */
+  .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; margin-bottom: 14px; box-shadow: var(--shadow); }
+  .chart-title { font-size: 13px; font-weight: 600; margin-bottom: 12px; }
+  .chart-sub { font-size: 11px; color: var(--text2); margin-bottom: 12px; margin-top: -8px; }
+  .chart-wrap { position: relative; width: 100%; height: 180px; }
+  .tsb-legend { display: flex; gap: 12px; margin-top: 8px; flex-wrap: wrap; }
+  .tsb-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text2); }
+  .tsb-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  /* ── RACES ── */
+  .race-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--surface); margin-bottom: 8px; box-shadow: var(--shadow); }
+  .race-item.is-target { border-color: var(--orange); border-width: 1.5px; }
+  .race-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .race-dot.target { background: var(--orange); }
+  .race-dot.tune { background: var(--blue); }
+  .race-name { font-size: 13px; font-weight: 600; }
+  .race-meta { font-size: 11px; color: var(--text2); margin-top: 2px; }
+  .race-badge { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; white-space: nowrap; }
+  .rb-target { background: var(--orange-bg); color: var(--orange); }
+  .rb-tune { background: var(--blue-bg); color: var(--blue); }
+  .rb-past { background: var(--surface2); color: var(--text3); }
+
+  /* ── SAVE/EXPORT ── */
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .save-msg { font-size: 12px; color: var(--text2); margin-top: 8px; min-height: 18px; }
+  input[type=file] { display: none; }
+
+  /* ── MODAL ── */
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:100; display:flex; align-items:center; justify-content:center; padding:16px; opacity:0; pointer-events:none; transition:opacity .2s; }
+  .modal-overlay.open { opacity:1; pointer-events:all; }
+  .modal { background:var(--surface); border-radius:var(--radius-lg); padding:20px; width:100%; max-width:420px; max-height:80vh; overflow-y:auto; box-shadow:0 8px 32px rgba(0,0,0,0.18); transform:translateY(8px); transition:transform .2s; }
+  .modal-overlay.open .modal { transform:translateY(0); }
+  .modal-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:14px; }
+  .modal-title { font-size:15px; font-weight:600; color:var(--text); }
+  .modal-date { font-size:12px; color:var(--text2); margin-top:2px; }
+  .modal-close { background:none; border:none; color:var(--text3); font-size:18px; cursor:pointer; padding:0 4px; }
+  .modal-close:hover { color:var(--text); }
+  .modal-row { display:flex; justify-content:space-between; align-items:baseline; padding:8px 0; border-bottom:1px solid var(--border); }
+  .modal-row:last-child { border-bottom:none; }
+  .modal-key { font-size:12px; color:var(--text2); }
+  .modal-val { font-size:13px; font-weight:500; color:var(--text); text-align:right; max-width:60%; }
+  .modal-plan { background:var(--surface2); border-radius:var(--radius); padding:10px 12px; margin:10px 0; font-size:12px; color:var(--text2); line-height:1.6; }
+  .modal-feeling { background:var(--surface2); border-radius:var(--radius); padding:10px 12px; margin-top:10px; font-size:13px; color:var(--text); line-height:1.65; font-style:italic; }
+  .modal-tag { display:inline-block; font-size:11px; padding:2px 8px; border-radius:20px; font-weight:500; margin-right:4px; }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-left">
+    <h1>THE SKY IS THE LIMIT</h1>
+    <p>越野跑訓練儀表板 · 姸樂</p>
+  </div>
+  <div class="cd-box">
+    <div class="cd-num" id="cd-num">—</div>
+    <div class="cd-lbl">Formosa Trail 75K</div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab active" onclick="sw('overview',this)">總覽</button>
+  <button class="tab" onclick="sw('input',this)">輸入</button>
+  <button class="tab" onclick="sw('trends',this)">趨勢</button>
+  <button class="tab" onclick="sw('races',this)">賽事</button>
+  <button class="tab" onclick="sw('guide',this)">說明</button>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     OVERVIEW
+══════════════════════════════════════════════ -->
+<div id="tab-overview" class="section active">
+  <div style="background:var(--surface2);border-left:3px solid var(--text3);border-radius:0 var(--radius) var(--radius) 0;padding:12px 16px;margin-bottom:20px;">
+    <p style="font-size:13px;color:var(--text2);line-height:1.7;font-style:italic;">"A race is a life that is born when you get up in the morning and dies when you cross the finish line."</p>
+    <p style="font-size:11px;color:var(--text3);margin-top:5px;">— Kilian Jornet</p>
+  </div>
+  <p class="sec-title">最近一週 · <span id="ov-week-label">—</span></p>
+  <div class="metric-grid">
+    <div class="metric-card"><div class="metric-label">距離</div><div class="metric-value" id="ov-dist">—<span>km</span></div></div>
+    <div class="metric-card"><div class="metric-label">爬升</div><div class="metric-value" id="ov-ele">—<span>m</span></div></div>
+    <div class="metric-card"><div class="metric-label">TSS</div><div class="metric-value" id="ov-tss">—</div><div class="metric-sub" id="ov-tss-sub"></div></div>
+    <div class="metric-card"><div class="metric-label">平均 HRV</div><div class="metric-value" id="ov-hrv">—</div><div class="metric-sub" id="ov-hrv-sub"></div></div>
+    <div class="metric-card"><div class="metric-label">睡眠分數</div><div class="metric-value" id="ov-sleep">—</div><div class="metric-sub" id="ov-sleep-sub"></div></div>
+    <div class="metric-card"><div class="metric-label">完食率</div><div class="metric-value" id="ov-comp">—</div></div>
+    <div class="metric-card"><div class="metric-label">TSB 狀態</div><div class="metric-value" id="ov-tsb">—</div><div class="metric-sub" id="ov-tsb-sub"></div></div>
+    <div class="metric-card"><div class="metric-label">週均 VAM</div><div class="metric-value" id="ov-vam">—</div><div class="metric-sub">m/hr</div></div>
+  </div>
+
+  <div class="ai-box" id="ov-ai">
+    <div class="ai-label"><span class="ai-dot"></span>本週摘要</div>
+    <p id="ov-ai-text" style="color:var(--text2);">儲存本週數據後，這裡會顯示訓練摘要。<br>按下方「✦ AI 分析 ↗」可複製數據到 Claude 對話獲得深度分析。</p>
+  </div>
+
+  <div class="quick-btns" id="ov-quick">
+    <button class="btn-ghost" onclick="askAI('HRV')">HRV 下滑怎麼辦 ↗</button>
+    <button class="btn-ghost" onclick="askAI('race')">備賽狀態評估 ↗</button>
+    <button class="btn-ghost" onclick="askAI('next')">下週建議 ↗</button>
+    <button class="btn-ghost" onclick="sendToAI()">✦ AI 分析 ↗</button>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Calendar in Overview -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+    <p class="sec-title" style="margin:0;">月曆</p>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div class="cal-nav-btns">
+        <button onclick="chMonth(-1)">‹</button>
+        <button onclick="chMonth(1)">›</button>
+      </div>
+      <span class="cal-title" id="cal-title2">—</span>
+      <button class="btn-ghost" style="font-size:11px;padding:4px 9px;" onclick="goToday()">今天</button>
+    </div>
+  </div>
+  <div class="cal-grid" id="cal-dn2"></div>
+  <div class="cal-grid" id="cal-cells2" style="margin-top:2px;"></div>
+  <div class="month-sum" id="month-sum2"></div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     INPUT
+══════════════════════════════════════════════ -->
+<div id="tab-input" class="section">
+  <!-- Week Navigator -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+    <div style="display:flex;align-items:center;gap:6px;">
+      <button class="btn-ghost" style="padding:5px 10px;font-size:14px;" onclick="navWeek(-1)" title="上一週">‹</button>
+      <select id="week-selector" onchange="loadWeekById(this.value)" style="font-size:13px;padding:5px 10px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);max-width:160px;">
+        <option value="new">＋ 新的一週</option>
+      </select>
+      <button class="btn-ghost" style="padding:5px 10px;font-size:14px;" onclick="navWeek(1)" title="下一週">›</button>
+    </div>
+    <button class="btn-ghost" onclick="newWeek()" style="font-size:12px;">＋ 新的一週</button>
+  </div>
+  <div class="week-box">
+    <div class="ig ig-4">
+      <div class="field"><label>WEEK</label><input type="text" id="wk-label" placeholder="W3"></div>
+      <div class="field"><label>WEEK OF <span style="font-size:10px;color:var(--text3);">（自動設為週一）</span></label><input type="date" id="wk-start"></div>
+      <div class="field"><label>PHASE</label>
+        <select id="wk-phase">
+          <option value="prep">預備期</option><option value="build">提升期</option>
+          <option value="specific">專項期</option><option value="taper">減量期</option>
+          <option value="race">比賽週</option><option value="recovery">恢復週</option>
+        </select>
+      </div>
+      <div class="field"><label>WEEK GOAL</label><input type="text" id="wk-goal" placeholder="例：有氧基礎 + 長跑"></div>
+    </div>
+  </div>
+
+  <div id="day-cards"></div>
+
+  <div class="totals-box">
+    <p class="sec-title" style="margin-bottom:10px;">WEEK SUMMARY</p>
+    <div class="totals-grid">
+      <div class="tc"><div class="tc-val" id="t-dist">—</div><div class="tc-lbl">距離 km</div></div>
+      <div class="tc"><div class="tc-val" id="t-ele">—</div><div class="tc-lbl">爬升 m</div></div>
+      <div class="tc"><div class="tc-val" id="t-tss">—</div><div class="tc-lbl">TSS</div></div>
+      <div class="tc"><div class="tc-val" id="t-hrv">—</div><div class="tc-lbl">平均 HRV</div></div>
+      <div class="tc"><div class="tc-val" id="t-sleep">—</div><div class="tc-lbl">睡眠分數</div></div>
+      <div class="tc"><div class="tc-val" id="t-comp">—</div><div class="tc-lbl">完食率</div></div>
+      <div class="tc"><div class="tc-val" id="t-str">—</div><div class="tc-lbl">肌力次數</div></div>
+      <div class="tc"><div class="tc-val" id="t-vam">—</div><div class="tc-lbl">均 VAM m/hr</div></div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn-primary" onclick="saveWeek()">💾 儲存本週</button>
+      <button class="btn-ghost" onclick="sendToAI()">✦ AI 分析 ↗</button>
+      <button class="btn-ghost" onclick="recalc()">重新計算</button>
+    </div>
+    <div class="save-msg" id="save-msg"></div>
+  </div>
+
+  <!-- 教練反饋 -->
+  <div class="week-box" style="margin-top:12px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+      <span style="font-size:16px;">🏅</span>
+      <p class="sec-title" style="margin:0;">教練反饋 · COACH FEEDBACK</p>
+    </div>
+    <div class="field">
+      <label>本週教練給的反饋、建議或調整方向</label>
+      <textarea id="wk-coach-feedback" rows="4" placeholder="例：本週長跑配速控制很好，下週可以嘗試在第三個小時加入一段 T Pace..."></textarea>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+  <div class="toolbar">
+    <button class="btn-ghost" onclick="exportData()">⬇ 匯出 JSON 備份</button>
+    <label class="btn-ghost" style="cursor:pointer;" for="import-file">⬆ 匯入 JSON</label>
+    <input type="file" id="import-file" accept=".json" onchange="importData(event)">
+    <button class="btn-ghost" onclick="exportCSV()">📊 匯出 CSV → Google Sheets</button>
+  </div>
+  <p style="font-size:11px;color:var(--text3);">建議每週儲存後匯出備份，換新版本時可匯入還原數據。CSV 可直接拖入 Google Sheets 使用。</p>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TRENDS
+══════════════════════════════════════════════ -->
+<div id="tab-trends" class="section">
+  <div class="chart-card">
+    <div class="chart-title">週訓練量 — 距離 & 爬升</div>
+    <div class="chart-wrap"><canvas id="c-vol"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">HRV 日趨勢</div>
+    <div class="chart-wrap"><canvas id="c-hrv"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">睡眠分數 日趨勢</div>
+    <div class="chart-sub">60分以下需注意</div>
+    <div class="chart-wrap"><canvas id="c-sleep"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">TSS 週趨勢</div>
+    <div class="chart-wrap"><canvas id="c-tss"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">CTL / ATL / TSB — 體能狀態曲線</div>
+    <div class="chart-sub">CTL = 體能（42天）· ATL = 疲勞（7天）· TSB = 狀態（CTL−ATL）</div>
+    <div class="chart-wrap"><canvas id="c-ctl"></canvas></div>
+    <div class="tsb-legend">
+      <div class="tsb-item"><div class="tsb-dot" style="background:#1A5FA8;"></div>CTL 體能</div>
+      <div class="tsb-item"><div class="tsb-dot" style="background:#C45C1A;"></div>ATL 疲勞</div>
+      <div class="tsb-item"><div class="tsb-dot" style="background:#2D6A2D;"></div>TSB 狀態</div>
+    </div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">EP 週趨勢 — 越野效率</div>
+    <div class="chart-wrap"><canvas id="c-ep"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">VAM 週趨勢 — 爬升速度</div>
+    <div class="chart-sub">VAM = 爬升(m) ÷ 時間(hr)｜越野跑訓練路線專用，跨路線比較請留意地形差異</div>
+    <div class="chart-wrap"><canvas id="c-vam"></canvas></div>
+  </div>
+  <p style="font-size:11px;color:var(--text3);margin-top:4px;">輸入3週以上數據後 CTL/ATL/TSB 曲線更準確。</p>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     RACES
+══════════════════════════════════════════════ -->
+<div id="tab-races" class="section">
+  <p class="sec-title">賽事計劃 · 2026</p>
+  <div id="race-list"></div>
+  <div class="divider"></div>
+  <p class="sec-title">新增比賽</p>
+  <div class="ig ig-4" style="margin-bottom:10px;">
+    <div class="field"><label>比賽名稱</label><input type="text" id="r-name" placeholder="賽事名稱"></div>
+    <div class="field"><label>日期</label><input type="date" id="r-date"></div>
+    <div class="field"><label>距離 km</label><input type="number" id="r-km"></div>
+    <div class="field"><label>爬升 m</label><input type="number" id="r-ele-r"></div>
+    <div class="field"><label>EP</label><input type="number" id="r-ep" step="0.1"></div>
+    <div class="field"><label>類型</label>
+      <select id="r-type"><option value="tune">以賽代訓</option><option value="target">目標賽事</option></select>
+    </div>
+  </div>
+  <button class="btn-ghost" onclick="addRace()">新增比賽</button>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     GUIDE
+══════════════════════════════════════════════ -->
+<div id="tab-guide" class="section">
+
+  <!-- Intensity Table -->
+  <p class="sec-title">訓練強度區間</p>
+  <div style="overflow-x:auto;margin-bottom:20px;">
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead>
+        <tr style="background:var(--surface2);">
+          <th style="padding:9px 12px;text-align:left;border-bottom:1px solid var(--border);font-size:11px;color:var(--text3);font-weight:600;letter-spacing:.05em;">強度</th>
+          <th style="padding:9px 12px;text-align:left;border-bottom:1px solid var(--border);font-size:11px;color:var(--text3);font-weight:600;letter-spacing:.05em;">簡稱</th>
+          <th style="padding:9px 12px;text-align:left;border-bottom:1px solid var(--border);font-size:11px;color:var(--text3);font-weight:600;letter-spacing:.05em;">說明</th>
+          <th style="padding:9px 12px;text-align:left;border-bottom:1px solid var(--border);font-size:11px;color:var(--text3);font-weight:600;letter-spacing:.05em;">心率區間</th>
+          <th style="padding:9px 12px;text-align:left;border-bottom:1px solid var(--border);font-size:11px;color:var(--text3);font-weight:600;letter-spacing:.05em;">含意</th>
+          <th style="padding:9px 12px;text-align:left;border-bottom:1px solid var(--border);font-size:11px;color:var(--text3);font-weight:600;letter-spacing:.05em;">RPE</th>
+        </tr>
+      </thead>
+      <tbody id="intensity-tbody"></tbody>
+    </table>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Metrics glossary -->
+  <p class="sec-title">數據名詞解釋</p>
+  <div id="glossary-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-bottom:20px;"></div>
+
+  <div class="divider"></div>
+
+  <!-- CTL/ATL/TSB detail -->
+  <p class="sec-title">CTL / ATL / TSB 詳細說明</p>
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;margin-bottom:14px;">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px;">
+      <div style="padding:12px;background:var(--blue-bg);border-radius:var(--radius);border:1px solid var(--blue)20;">
+        <div style="font-size:16px;font-weight:700;color:var(--blue);margin-bottom:4px;">CTL</div>
+        <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:4px;">Chronic Training Load · 體能</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.6;">過去 42 天 TSS 的指數加權平均，代表你長期累積的有氧體能基礎。數字越高，基礎越好。</div>
+      </div>
+      <div style="padding:12px;background:var(--orange-bg);border-radius:var(--radius);border:1px solid var(--orange)20;">
+        <div style="font-size:16px;font-weight:700;color:var(--orange);margin-bottom:4px;">ATL</div>
+        <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:4px;">Acute Training Load · 疲勞</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.6;">過去 7 天 TSS 的指數加權平均，代表近期的訓練疲勞程度。大量訓練後 ATL 會快速升高。</div>
+      </div>
+      <div style="padding:12px;background:var(--green-bg);border-radius:var(--radius);border:1px solid var(--green)20;">
+        <div style="font-size:16px;font-weight:700;color:var(--green);margin-bottom:4px;">TSB</div>
+        <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:4px;">Training Stress Balance · 狀態</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.6;">TSB = CTL − ATL。正值代表狀態新鮮，負值代表疲勞中。比賽當天目標 TSB 在 −5 到 +10 之間。</div>
+      </div>
+    </div>
+    <p class="sec-title" style="margin-bottom:8px;">TSB 數值對應狀態</p>
+    <div style="display:flex;flex-direction:column;gap:6px;" id="tsb-table"></div>
+  </div>
+
+  <div class="divider"></div>
+  <p class="sec-title">EP / EPH 說明</p>
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;margin-bottom:14px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div>
+        <div style="font-size:14px;font-weight:600;color:var(--purple);margin-bottom:6px;">EP — Effort Point 耗力指數</div>
+        <div style="font-size:13px;color:var(--text2);line-height:1.7;">評估一段越野路線的整體難度與耗力程度。同時考慮距離與爬升，比單純看公里數更能反映實際的體力消耗。</div>
+      </div>
+      <div>
+        <div style="font-size:14px;font-weight:600;color:var(--purple);margin-bottom:6px;">EPH — Effort Points per Hour</div>
+        <div style="font-size:13px;color:var(--text2);line-height:1.7;">每小時耗力速度，反映跑動效率。數字越高代表單位時間內完成的難度越高，是追蹤越野跑進步的核心指標。</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="day-modal" onclick="closeModal(event)">
+  <div class="modal" id="modal-content">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="modal-title">—</div>
+        <div class="modal-date" id="modal-date">—</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button class="btn-ghost" id="modal-edit-btn" style="font-size:12px;padding:5px 10px;display:none;" onclick="editFromModal()">✏ 編輯</button>
+        <button class="modal-close" onclick="document.getElementById('day-modal').classList.remove('open')">✕</button>
+      </div>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+// ── GUIDE DATA ──
+const INTENSITY_ROWS = [
+  {lvl:'0', short:'—', desc:'Warm up / Recovery', hr:'0%～59%', meaning:'暖身', rpe:'<2（非常輕鬆）', color:'var(--green)'},
+  {lvl:'1', short:'E PACE', desc:'Easy', hr:'59%～74%', meaning:'有氧耐力', rpe:'2-4（很輕鬆）', color:'var(--green)'},
+  {lvl:'2', short:'M PACE', desc:'Marathon / Moderate', hr:'74%～84%', meaning:'有氧動力', rpe:'5-6（普通輕鬆）', color:'var(--amber)'},
+  {lvl:'3', short:'T PACE', desc:'Threshold / Tempo', hr:'84%～88%', meaning:'乳酸閾值', rpe:'7-8（吃力）', color:'var(--amber)'},
+  {lvl:'4', short:'I PACE', desc:'Interval / VO₂max', hr:'88%～95%', meaning:'無氧動力', rpe:'8-9（很吃力）', color:'var(--orange)'},
+  {lvl:'5', short:'R PACE', desc:'Repetition', hr:'95%～100%', meaning:'爆發力', rpe:'> 9（非常吃力）', color:'var(--red)'},
+];
+
+const GLOSSARY = [
+  {term:'VAM', full:'Velocità Ascensionale Media', zh:'平均爬升速度', desc:'每小時爬升的公尺數（m/hr）。由義大利語「平均上升速度」而來，是評估爬升能力的核心指標。同一訓練路線的VAM持續上升，代表爬升效率在進步。FT75K參考目標：爬升段維持350-400 m/hr。'},
+  {term:'TSS', full:'Training Stress Score', zh:'訓練壓力分數', desc:'衡量單次訓練對身體的整體壓力，綜合強度與時間計算。E Pace 1小時約 50-60 分，T Pace 1小時約 100 分。'},
+  {term:'HRV', full:'Heart Rate Variability', zh:'心率變異性', desc:'連續心跳之間的時間差異，由 Garmin 手錶睡眠期間自動偵測。數值高 = 自律神經平衡佳、恢復好。連續下滑是過度訓練的早期信號。'},
+  {term:'RPE', full:'Rating of Perceived Exertion', zh:'運動自覺強度量表', desc:'主觀評估訓練有多累的 1-10 量表。1 = 幾乎沒感覺，10 = 竭盡全力。配合心率區間使用，能更全面評估訓練品質。'},
+  {term:'EP', full:'Effort Point', zh:'耗力指數', desc:'越野跑的難度指標，同時考量距離與爬升。FT75K 的 EP 為 116，是評估備賽里程的重要依據。'},
+  {term:'EPH', full:'Effort Points per Hour', zh:'每小時耗力速度', desc:'跑動效率指標。隨著訓練進步，相同路線的 EPH 應逐漸提升，代表用更少時間完成相同難度。'},
+  {term:'Sleep Score', full:'Garmin Sleep Score', zh:'Garmin 睡眠分數', desc:'Garmin 根據睡眠時長、深眠比例、HRV 等綜合評分。89+ 優秀、75-88 良好、60-74 一般、59以下需注意。'},
+  {term:'完食率', full:'Completion Rate', zh:'課表完成度', desc:'實際訓練量 ÷ 計畫訓練量。90% 以上視為完成，低於 70% 需檢視原因（疲勞、時間、動力）。'},
+  {term:'疲勞指數', full:'Fatigue Index', zh:'TSS ÷ HRV', desc:'每日 TSS 除以 HRV，自訂指標用來快速判斷當天的身心負荷比例。數值偏高時建議保守安排隔日訓練。'},
+];
+
+const TSB_RANGES = [
+  {range:'+15 以上', label:'過度減量', desc:'狀態很新鮮，但可能因訓練不足而失去競技感', color:'var(--blue)'},
+  {range:'-5 ～ +10', label:'比賽最佳區間', desc:'理想比賽狀態，體能高、疲勞低', color:'var(--green)'},
+  {range:'-10 ～ -5', label:'良好訓練狀態', desc:'稍有疲勞但仍可維持訓練品質', color:'var(--green)'},
+  {range:'-30 ～ -10', label:'正常訓練疲勞', desc:'積累期常見狀態，確保足夠恢復', color:'var(--amber)'},
+  {range:'-30 以下', label:'⚠ 過度訓練警戒', desc:'需立即安排恢復週，避免受傷或停滯', color:'var(--red)'},
+];
+
+function buildGuide() {
+  // intensity table
+  const tbody = document.getElementById('intensity-tbody');
+  if(tbody && tbody.children.length === 0) {
+    INTENSITY_ROWS.forEach((r,i) => {
+      const tr = document.createElement('tr');
+      tr.style.borderBottom = '1px solid var(--border)';
+      tr.innerHTML = `
+        <td style="padding:10px 12px;font-weight:700;color:${r.color};">${r.lvl}</td>
+        <td style="padding:10px 12px;font-weight:600;color:${r.color};">${r.short}</td>
+        <td style="padding:10px 12px;color:var(--text);">${r.desc}</td>
+        <td style="padding:10px 12px;color:var(--text2);">${r.hr}</td>
+        <td style="padding:10px 12px;color:var(--text2);">${r.meaning}</td>
+        <td style="padding:10px 12px;color:var(--text2);font-size:12px;">${r.rpe}</td>`;
+      tbody.appendChild(tr);
+    });
+  }
+  // glossary
+  const grid = document.getElementById('glossary-grid');
+  if(grid && grid.children.length === 0) {
+    GLOSSARY.forEach(g => {
+      const div = document.createElement('div');
+      div.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:13px;';
+      div.innerHTML = `
+        <div style="display:flex;align-items:baseline;gap:7px;margin-bottom:5px;">
+          <span style="font-size:15px;font-weight:700;color:var(--text);">${g.term}</span>
+          <span style="font-size:11px;color:var(--text3);">${g.full}</span>
+        </div>
+        <div style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:5px;">${g.zh}</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.65;">${g.desc}</div>`;
+      grid.appendChild(div);
+    });
+  }
+  // TSB table
+  const tsbt = document.getElementById('tsb-table');
+  if(tsbt && tsbt.children.length === 0) {
+    TSB_RANGES.forEach(r => {
+      const div = document.createElement('div');
+      div.style.cssText = 'display:flex;align-items:center;gap:12px;padding:9px 12px;background:var(--surface2);border-radius:var(--radius);';
+      div.innerHTML = `
+        <div style="font-size:13px;font-weight:700;color:${r.color};min-width:90px;">${r.range}</div>
+        <div style="font-size:12px;font-weight:600;color:var(--text);min-width:110px;">${r.label}</div>
+        <div style="font-size:12px;color:var(--text2);">${r.desc}</div>`;
+      tsbt.appendChild(div);
+    });
+  }
+}
+
+// ════════════════════════════════════════
+// DATA
+// ════════════════════════════════════════
+const STORAGE_KEY = 'gf_dashboard_v1';
+let state = {
+  weeks: [],
+  races: [
+    {name:'Ultraks SA: MOUNTAIN',date:'2026-08-22',km:32,ele:2000,ep:52,type:'tune'},
+    {name:'淘金越野 30K',date:'2026-09-20',km:30,ele:1730,ep:47.3,type:'tune'},
+    {name:'Xtrail 貓空 16K',date:'2026-10-04',km:17,ele:1132,ep:28.32,type:'tune'},
+    {name:'陽明山國家公園馬拉松',date:'2026-11-01',km:42,ele:1200,ep:54,type:'tune'},
+    {name:'Formosa Trail 75K',date:'2026-11-21',km:75,ele:4100,ep:116,type:'target'},
+  ]
+};
+
+function loadState() {
+  try {
+    const s = localStorage.getItem(STORAGE_KEY);
+    if (s) { const p = JSON.parse(s); state.weeks = p.weeks||[]; if(p.races&&p.races.length) state.races=p.races; }
+  } catch(e){}
+}
+function saveState() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e){}
+}
+function exportData() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `gf-training-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  // Record last export time
+  localStorage.setItem('gf_last_export', Date.now());
+}
+
+function exportCSV() {
+  if(state.weeks.length===0){alert('尚無數據可匯出。');return;}
+  const headers = ['週次','開始日期','訓練期','週目標','教練反饋','總距離km','總爬升m','總TSS','平均HRV','平均睡眠分數','完食率%','均VAM m/hr'];
+  const rows = state.weeks.map(w=>{
+    const T = w.total||{};
+    return [
+      w.label||'',
+      w.startDate||'',
+      w.phase||'',
+      (w.goal||'').replace(/,/g,'，'),
+      (w.coachFeedback||'').replace(/,/g,'，').replace(/\n/g,' '),
+      T.dist||0,
+      T.ele||0,
+      T.tss||0,
+      T.avgHrv||0,
+      T.avgSleep||0,
+      T.comp||0,
+      T.avgVam||0,
+    ];
+  });
+  const csv = '\uFEFF' + [headers, ...rows].map(r=>r.join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `gf-training-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+function checkBackupReminder() {
+  const last = parseInt(localStorage.getItem('gf_last_export')||'0');
+  const daysSince = (Date.now() - last) / 86400000;
+  if(state.weeks.length > 0 && (last===0 || daysSince >= 7)) {
+    const msg = document.getElementById('save-msg');
+    msg.innerHTML = `✓ 已儲存！&nbsp;<span style="color:var(--amber);">⚠ 距上次備份已超過 ${last===0?'—':Math.floor(daysSince)} 天，建議匯出 JSON 備份。</span>`;
+    msg.style.color = '';
+  }
+}
+function importData(e) {
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const d = JSON.parse(ev.target.result);
+      if(d.weeks) state.weeks = d.weeks;
+      if(d.races) state.races = d.races;
+      saveState();
+      refreshAll();
+      // Switch to overview tab
+      document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+      document.querySelector('.tab').classList.add('active');
+      document.getElementById('tab-overview').classList.add('active');
+      alert(`✓ 匯入成功！共載入 ${state.weeks.length} 週數據。`);
+    } catch(err) {
+      alert('✕ 匯入失敗：請確認是從本儀表板匯出的 JSON 檔案。');
+    }
+  };
+  reader.readAsText(file);
+}
+
+// ════════════════════════════════════════
+// CONSTANTS
+// ════════════════════════════════════════
+const DAYS=[{zh:'一',en:'Mon'},{zh:'二',en:'Tue'},{zh:'三',en:'Wed'},{zh:'四',en:'Thu'},{zh:'五',en:'Fri'},{zh:'六',en:'Sat'},{zh:'日',en:'Sun'}];
+const SESS_TYPES=['Rest','Trail Run','Run','Running Ability Class','Strength','Swimming','Cycling'];
+const TYPE_BADGE={'Rest':'db-rest','Trail Run':'db-trail','Run':'db-run','Running Ability Class':'db-class','Strength':'db-str','Swimming':'db-swim','Cycling':'db-cycle'};
+const TYPE_COL={'Trail Run':'#2D6A2D','Run':'#1A5FA8','Running Ability Class':'#4B3B9E','Strength':'#8C5A0A','Swimming':'#0E7490','Cycling':'#6B4A9E'};
+
+// ════════════════════════════════════════
+// COUNTDOWN
+// ════════════════════════════════════════
+function updateCountdown() {
+  const d = Math.ceil((new Date('2026-11-21') - new Date()) / 86400000);
+  document.getElementById('cd-num').textContent = d > 0 ? d+'天' : 'GO!';
+}
+
+// ════════════════════════════════════════
+// TABS
+// ════════════════════════════════════════
+function sw(t, btn) {
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-'+t).classList.add('active');
+  if(t==='trends') renderCharts();
+  if(t==='races') renderRaces();
+  if(t==='overview') { renderCal(); updateOverview(); }
+  if(t==='guide') buildGuide();
+  if(t==='input') {
+    updateWeekSelector();
+    if(state.weeks.length>0 && document.getElementById('day-cards').children.length===0) {
+      restoreInputFromState(state.weeks[state.weeks.length-1]);
+      document.getElementById('week-selector').value = state.weeks[state.weeks.length-1].label;
+    }
+  }
+}
+
+// ════════════════════════════════════════
+// OVERVIEW
+// ════════════════════════════════════════
+function getCurrentWeek() {
+  // Find the week that contains today
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  for(let i = state.weeks.length-1; i >= 0; i--) {
+    const w = state.weeks[i];
+    if(!w.startDate) continue;
+    const monday = getMondayOfWeek(w.startDate);
+    if(!monday) continue;
+    const sunday = new Date(monday); sunday.setDate(sunday.getDate()+6); sunday.setHours(23,59,59,999);
+    if(today >= monday && today <= sunday) return w;
+  }
+  // Fallback: return the most recent week
+  return state.weeks[state.weeks.length-1];
+}
+
+function updateOverview() {
+  const w = getCurrentWeek();
+  if(!w) return;
+  const T = w.total;
+  document.getElementById('ov-week-label').textContent = w.label || '—';
+  document.getElementById('ov-dist').innerHTML = (T.dist||'—')+'<span>km</span>';
+  document.getElementById('ov-ele').innerHTML = (T.ele||'—')+'<span>m</span>';
+  document.getElementById('ov-tss').textContent = T.tss||'—';
+  document.getElementById('ov-tss-sub').textContent = T.tss ? '日均 '+Math.round(T.tss/7) : '';
+  document.getElementById('ov-hrv').textContent = T.avgHrv||'—';
+  document.getElementById('ov-sleep').textContent = T.avgSleep||'—';
+  document.getElementById('ov-comp').innerHTML = T.comp ? T.comp+'<span>%</span>' : '—';
+  const vamEl2=document.getElementById('ov-vam');
+  if(vamEl2) vamEl2.textContent=T.avgVam>0?T.avgVam:'—';
+  // TSB
+  const {ctl,atl} = calcCTLATL();
+  const tsb = Math.round(ctl - atl);
+  const tsbEl = document.getElementById('ov-tsb');
+  tsbEl.textContent = tsb;
+  tsbEl.style.color = tsb >= 5 ? 'var(--green)' : tsb >= -20 ? 'var(--amber)' : 'var(--red)';
+  document.getElementById('ov-tsb-sub').textContent = tsb >= 5 ? '新鮮' : tsb >= -10 ? '理想' : tsb >= -30 ? '訓練中' : '注意過度訓練';
+  // Auto-generate summary
+  const box = document.getElementById('ov-ai');
+  const {ctl:ctl2,atl:atl2} = calcCTLATL();
+  const tsb2 = Math.round(ctl2 - atl2);
+  const tsbStatus = tsb2 >= 15 ? '過度減量，注意失去競技感' : tsb2 >= 5 ? '狀態新鮮，適合比賽或高強度' : tsb2 >= -10 ? '理想訓練狀態' : tsb2 >= -30 ? '正常訓練疲勞，確保恢復' : '⚠ 疲勞過高，建議安排恢復週';
+  const sleepStatus = T.avgSleep>=75?'良好':'T.avgSleep'>=60?'一般':'需注意';
+  const hrvNote = T.avgHrv >= 65 ? '恢復狀態佳' : T.avgHrv >= 55 ? '恢復中等' : '⚠ HRV偏低，注意過度訓練';
+  const compNote = T.comp >= 90 ? '課表執行優秀' : T.comp >= 70 ? '課表大致完成' : '課表完成度偏低，檢視原因';
+  const summaryLines = [
+    `本週（${w.label} · ${w.phase}）訓練距離 ${T.dist}km、爬升 ${T.ele}m、TSS ${T.tss}。`,
+    `HRV 均值 ${T.avgHrv}（${hrvNote}）、睡眠分數 ${T.avgSleep}。`,
+    `完食率 ${T.comp}%，${compNote}。`,
+    T.avgVam > 0 ? `平均 VAM ${T.avgVam} m/hr。` : '',
+    w.goal ? `本週目標：「${w.goal}」。` : '',
+    w.coachFeedback ? `教練反饋：「${w.coachFeedback}」` : '',
+  ].filter(Boolean).join(' ');
+  box.innerHTML = `<div class="ai-label"><span class="ai-dot"></span>本週摘要 · ${w.label}</div>
+    <p>${summaryLines}</p>
+    <div class="tags" style="margin-top:10px;">
+      <span class="tag ${T.avgHrv>=65?'tag-ok':T.avgHrv>=55?'tag-info':'tag-alert'}">HRV ${T.avgHrv}</span>
+      <span class="tag ${T.avgSleep>=75?'tag-ok':T.avgSleep>=60?'tag-info':'tag-alert'}">睡眠 ${T.avgSleep}</span>
+      <span class="tag ${T.comp>=90?'tag-ok':T.comp>=70?'tag-info':'tag-warn'}">完食 ${T.comp}%</span>
+      <span class="tag ${tsb2>=-10&&tsb2<=15?'tag-ok':tsb2<-30?'tag-alert':'tag-warn'}">TSB ${tsb2} · ${tsbStatus}</span>
+      ${T.avgVam>0?`<span class="tag tag-info">VAM ${T.avgVam} m/hr</span>`:''}
+    </div>
+    <p style="font-size:11px;color:var(--text3);margin-top:10px;">按「✦ AI 分析 ↗」可將數據複製，貼到 Claude 對話獲得深度分析與下週建議。</p>`;
+  document.getElementById('ov-quick').style.display = 'flex';
+}
+
+function askAI(type) {
+  const w = getCurrentWeek();
+  if(!w) { alert('請先輸入並儲存本週數據'); return; }
+  const T = w.total;
+  const base = `我的訓練數據（${w.label}）：距離${T.dist}km、爬升${T.ele}m、TSS ${T.tss}、平均HRV ${T.avgHrv}、睡眠分數${T.avgSleep}、完食率${T.comp}%、均VAM ${T.avgVam}m/hr。目標：2026/11/21 Formosa Trail 75K（75km、4100m爬升）。`;
+  const q = {
+    'HRV': base + ' 我的HRV本週下滑明顯，請告訴我原因分析和下週調整建議。',
+    'race': base + ' 請評估我目前的備賽狀態，離比賽還有多少時間，訓練量是否足夠？',
+    'next': base + ' 請給我下週的具體訓練建議，包含訓練量、強度和恢復安排。',
+  };
+  if(typeof sendPrompt!=='undefined') {
+    sendPrompt(q[type]);
+  } else {
+    navigator.clipboard.writeText(q[type]).then(()=>{
+      alert('✓ 已複製！請貼到 Claude 對話中。');
+    }).catch(()=>{
+      alert('請在 Claude 對話中使用此功能，或手動複製問題貼到對話。');
+    });
+  }
+}
+
+// ════════════════════════════════════════
+// CALENDAR
+// ════════════════════════════════════════
+let calY = new Date().getFullYear(), calM = new Date().getMonth();
+function chMonth(d) { calM+=d; if(calM>11){calM=0;calY++;} if(calM<0){calM=11;calY--;} renderCal(); }
+function goToday() { calY=new Date().getFullYear(); calM=new Date().getMonth(); renderCal(); }
+
+function closeModal(e) {
+  if(e.target===document.getElementById('day-modal')) document.getElementById('day-modal').classList.remove('open');
+}
+
+let modalWeekLabel = null; // track which week the modal is showing
+
+function updateWeekSelector() {
+  const sel = document.getElementById('week-selector');
+  if(!sel) return;
+  const current = sel.value;
+  sel.innerHTML = '<option value="new">＋ 新的一週</option>';
+  [...state.weeks].reverse().forEach(w => {
+    const opt = document.createElement('option');
+    opt.value = w.label;
+    opt.textContent = `${w.label} · ${w.startDate||''} · ${w.phase||''}`;
+    sel.appendChild(opt);
+  });
+  // restore selection
+  if(current && [...sel.options].some(o=>o.value===current)) sel.value = current;
+}
+
+function loadWeekById(label) {
+  if(label === 'new') { newWeek(); return; }
+  const w = state.weeks.find(x=>x.label===label);
+  if(w) restoreInputFromState(w);
+}
+
+function navWeek(dir) {
+  const sel = document.getElementById('week-selector');
+  const opts = [...sel.options].filter(o=>o.value!=='new');
+  if(opts.length===0) return;
+  const cur = sel.value;
+  const idx = opts.findIndex(o=>o.value===cur);
+  const next = idx + dir;
+  if(next >= 0 && next < opts.length) {
+    sel.value = opts[next].value;
+    loadWeekById(opts[next].value);
+  }
+}
+
+function editFromModal() {
+  if(!modalWeekLabel) return;
+  document.getElementById('day-modal').classList.remove('open');
+  // Switch to input tab
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab')[1].classList.add('active'); // input tab
+  document.getElementById('tab-input').classList.add('active');
+  // Load the week
+  const w = state.weeks.find(x=>x.label===modalWeekLabel);
+  if(w) {
+    document.getElementById('day-cards').innerHTML='';
+    restoreInputFromState(w);
+    updateWeekSelector();
+    document.getElementById('week-selector').value = modalWeekLabel;
+  }
+}
+
+function openDayModal(day, wk, race, dateStr) {
+  const modal = document.getElementById('day-modal');
+  const title = document.getElementById('modal-title');
+  const dateEl = document.getElementById('modal-date');
+  const body = document.getElementById('modal-body');
+
+  // Find which week this day belongs to
+  modalWeekLabel = null;
+  state.weeks.forEach(w => {
+    if(!w.startDate) return;
+    const monday = getMondayOfWeek(w.startDate);
+    if(!monday) return;
+    for(let i=0;i<7;i++){
+      const d=new Date(monday); d.setDate(d.getDate()+i);
+      if(d.getFullYear()===calY&&d.getMonth()===calM&&d.getDate()===day) modalWeekLabel=w.label;
+    }
+  });
+  const editBtn = document.getElementById('modal-edit-btn');
+  if(editBtn) editBtn.style.display = modalWeekLabel ? 'block' : 'none';
+
+  if(race) {
+    title.textContent = '🏁 ' + race.name;
+    dateEl.textContent = dateStr + ' · ' + (race.type==='target'?'目標賽事':'以賽代訓');
+    body.innerHTML = `
+      <div class="modal-row"><span class="modal-key">距離</span><span class="modal-val">${race.km} km</span></div>
+      <div class="modal-row"><span class="modal-key">爬升</span><span class="modal-val">${race.ele} m</span></div>
+      <div class="modal-row"><span class="modal-key">EP</span><span class="modal-val">${race.ep}</span></div>`;
+  } else if(wk && wk.type !== 'Rest') {
+    const s = wk.sessions && wk.sessions[0];
+    const typeColor = {'Trail Run':'var(--green)','Run':'var(--blue)','Running Ability Class':'var(--purple)','Strength':'var(--amber)','Swimming':'#0E7490','Cycling':'#6B4A9E'}[wk.type]||'var(--text2)';
+    title.innerHTML = `<span style="color:${typeColor}">${wk.type}</span>`;
+    dateEl.textContent = dateStr;
+
+    let rows = '';
+    if(wk.dist>0) rows+=`<div class="modal-row"><span class="modal-key">實際距離</span><span class="modal-val">${wk.dist} km</span></div>`;
+    if(s&&s.time) rows+=`<div class="modal-row"><span class="modal-key">時間</span><span class="modal-val">${s.time}</span></div>`;
+    if(s&&s.pace) rows+=`<div class="modal-row"><span class="modal-key">配速</span><span class="modal-val">${s.pace}</span></div>`;
+    if(wk.ele>0) rows+=`<div class="modal-row"><span class="modal-key">爬升</span><span class="modal-val">${wk.ele} m</span></div>`;
+    // VAM
+    if(wk.ele>0 && s&&s.time) {
+      const hrs=parseTimeToHrs(s.time);
+      if(hrs>0) rows+=`<div class="modal-row"><span class="modal-key">VAM</span><span class="modal-val">${Math.round(wk.ele/hrs)} m/hr</span></div>`;
+    }
+    if(wk.tss>0) rows+=`<div class="modal-row"><span class="modal-key">TSS</span><span class="modal-val">${wk.tss}</span></div>`;
+    if(s&&s.ep>0) rows+=`<div class="modal-row"><span class="modal-key">EP / EPH</span><span class="modal-val">${s.ep}${s.eph?' / '+s.eph:''}</span></div>`;
+    if(s&&s.rpe>0) rows+=`<div class="modal-row"><span class="modal-key">RPE</span><span class="modal-val">${s.rpe} / 10</span></div>`;
+    if(wk.hrv>0) rows+=`<div class="modal-row"><span class="modal-key">HRV</span><span class="modal-val">${wk.hrv}</span></div>`;
+    if(wk.sleep>0) {
+      const sc=wk.sleep;
+      const scColor=sc>=75?'var(--green)':sc>=60?'var(--amber)':'var(--red)';
+      rows+=`<div class="modal-row"><span class="modal-key">睡眠分數</span><span class="modal-val" style="color:${scColor}">${sc}</span></div>`;
+    }
+    if(wk.sleepHr>0) rows+=`<div class="modal-row"><span class="modal-key">睡眠時間</span><span class="modal-val">${wk.sleepHr} hr</span></div>`;
+
+    // Plan
+    let planHtml='';
+    if(s&&s.planDesc) planHtml=`<div class="modal-plan">📋 ${s.planDesc}</div>`;
+    else if(s&&s.planDist) planHtml=`<div class="modal-plan">📋 計畫距離 ${s.planDist}km${s.planPace?' · '+s.planPace:''}</div>`;
+
+    // Completion
+    let compHtml='';
+    if(s&&s.planDist>0&&wk.dist>0){
+      const pct=Math.min(Math.round(wk.dist/s.planDist*100),100);
+      const compColor=pct>=90?'tag-ok':pct>=60?'tag-warn':'tag-alert';
+      compHtml=`<div style="margin-top:10px;"><span class="modal-tag ${compColor}">完食率 ${pct}%</span></div>`;
+    }
+
+    // Feeling
+    const feelHtml=wk.feeling?`<div class="modal-feeling">"${wk.feeling}"</div>`:'';
+
+    body.innerHTML = rows + planHtml + compHtml + feelHtml;
+  } else {
+    title.textContent = 'Rest Day';
+    dateEl.textContent = dateStr;
+    let rows='';
+    if(wk&&wk.hrv>0) rows+=`<div class="modal-row"><span class="modal-key">HRV</span><span class="modal-val">${wk.hrv}</span></div>`;
+    if(wk&&wk.sleep>0) rows+=`<div class="modal-row"><span class="modal-key">睡眠分數</span><span class="modal-val">${wk.sleep}</span></div>`;
+    if(wk&&wk.feeling) rows+=`<div class="modal-feeling">"${wk.feeling}"</div>`;
+    body.innerHTML = rows || '<p style="font-size:13px;color:var(--text2);padding:8px 0;">休息日，無訓練數據</p>';
+  }
+  modal.classList.add('open');
+}
+
+function parseLocalDate(str) {
+  // Parse YYYY-MM-DD as local time (avoid UTC offset issues)
+  if(!str) return new Date();
+  const [y,m,d] = str.split('-').map(Number);
+  return new Date(y, m-1, d);
+}
+
+function renderCal() {
+  const MN=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+  const titleEl = document.getElementById('cal-title2');
+  const dnEl = document.getElementById('cal-dn2');
+  const cellEl = document.getElementById('cal-cells2');
+  if(!titleEl) return;
+  titleEl.textContent = `${calY} · ${MN[calM]}`;
+  dnEl.innerHTML = ['一','二','三','四','五','六','日'].map(d=>`<div class="cal-dn">${d}</div>`).join('');
+  const today = new Date();
+  let dow = new Date(calY,calM,1).getDay(); dow = dow===0?6:dow-1;
+  const dim = new Date(calY,calM+1,0).getDate();
+  // build race map
+  const rMap = {};
+  state.races.forEach(r=>{const d=parseLocalDate(r.date);if(d.getFullYear()===calY&&d.getMonth()===calM)rMap[d.getDate()]=r;});
+  // build workout map from weeks - always use Monday as anchor
+  const wMap = {};
+  state.weeks.forEach(w=>{
+    if(!w.startDate) return;
+    // Ensure we always start from Monday
+    const monday = getMondayOfWeek(w.startDate);
+    if(!monday) return;
+    if(w.days) w.days.forEach((day,i)=>{
+      const d=new Date(monday); d.setDate(d.getDate()+i);
+      if(d.getFullYear()===calY&&d.getMonth()===calM) wMap[d.getDate()]=day;
+    });
+  });
+  cellEl.innerHTML='';
+  for(let i=0;i<dow;i++){const e=document.createElement('div');e.className='cal-cell empty';cellEl.appendChild(e);}
+  let mDist=0,mEle=0,mTss=0,mTrain=0;
+  for(let day=1;day<=dim;day++){
+    const cell=document.createElement('div'); cell.className='cal-cell';
+    const isToday=today.getFullYear()===calY&&today.getMonth()===calM&&today.getDate()===day;
+    if(isToday) cell.classList.add('today');
+    const race=rMap[day]; const wk=wMap[day];
+    let h=`<div class="cal-dn-num">${day}</div>`;
+    if(race){
+      cell.classList.add(race.type==='target'?'c-target':'c-tune');
+      h+=`<div class="${race.type==='target'?'cal-race-lbl':'cal-tune-lbl'}">🏁${race.name.length>7?race.name.slice(0,7)+'…':race.name}</div>`;
+      if(race.km) h+=`<div style="font-size:9px;color:var(--text2);">${race.km}km·${race.ele}m↑</div>`;
+    } else if(wk) {
+      const type=wk.type||'Rest';
+      if(type!=='Rest'&&wk.dist>0){
+        const cls={'Trail Run':'c-trail','Run':'c-run','Running Ability Class':'c-class','Strength':'c-strength','Swimming':'c-swim','Cycling':'c-cycle'}[type]||'';
+        if(cls) cell.classList.add(cls);
+        h+=`<div class="cal-dist">${wk.dist}<span style="font-size:9px;color:var(--text2);">km</span></div>`;
+        h+=`<div class="cal-type-label">${type}</div>`;
+        if(wk.tss) h+=`<div class="cal-tss">TSS ${wk.tss}</div>`;
+        mDist+=wk.dist; mEle+=wk.ele||0; mTss+=wk.tss||0; mTrain++;
+      } else { h+=`<div class="cal-rest">Rest</div>`; }
+    }
+    const MN2=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+    const dateStr=`${calY}/${calM+1}/${day}`;
+    cell.style.cursor=(race||(wk&&(wk.type!=='Rest'||wk.hrv||wk.feeling)))?'pointer':'default';
+    if(race||(wk&&(wk.type!=='Rest'||wk.hrv||wk.feeling))) {
+      cell.onclick=()=>openDayModal(day, wk||null, race||null, dateStr);
+    }
+    cell.innerHTML=h; cellEl.appendChild(cell);
+  }
+  document.getElementById('month-sum2').innerHTML=`
+    <div class="ms-card"><div class="ms-val">${mDist.toFixed(1)}<span style="font-size:11px;font-weight:400;">km</span></div><div class="ms-lbl">月總距離</div></div>
+    <div class="ms-card"><div class="ms-val">${mEle}<span style="font-size:11px;font-weight:400;">m</span></div><div class="ms-lbl">月總爬升</div></div>
+    <div class="ms-card"><div class="ms-val">${mTss}</div><div class="ms-lbl">月總TSS</div></div>
+    <div class="ms-card"><div class="ms-val">${mTrain}<span style="font-size:11px;font-weight:400;">天</span></div><div class="ms-lbl">訓練天數</div></div>`;
+}
+
+// ════════════════════════════════════════
+// INPUT
+// ════════════════════════════════════════
+function getRpeColor(v){return v<=3?'#2D6A2D':v<=6?'#8C5A0A':v<=8?'#C45C1A':'#A32D2D';}
+
+function runFields(id, isClass) {
+  const planSection = `<div class="plan-col">
+      <div class="col-lbl">Plan 課表</div>
+      <div class="field"><label>課表描述</label><textarea id="pd-${id}" rows="3" placeholder="${isClass ? '上課內容、動作、組數...' : '貼上 TrainingPeaks 課表內容...'}"></textarea></div>
+      <div class="field"><label>計畫距離 km</label><input type="number" id="pld-${id}" step="0.1" oninput="recalc()"></div>
+      <div class="field"><label>計畫配速</label><input type="text" id="plp-${id}" placeholder="5:30/km"></div>
+    </div>`;
+  return `<div class="plan-exec">
+    ${planSection}
+    <div class="exec-col">
+      <div class="col-lbl">Actual 執行</div>
+      <div class="field"><label>實際距離 km</label><input type="number" id="d-${id}" step="0.01" oninput="recalc()"></div>
+      <div class="field"><label>實際時間</label><input type="text" id="ti-${id}" placeholder="1:20:00"></div>
+      <div class="field"><label>實際配速</label><input type="text" id="pa-${id}" placeholder="8:32/km"></div>
+      <div class="field"><label>爬升 m</label><input type="number" id="el-${id}" oninput="recalc()"></div>
+      <div class="field"><label>TSS</label><input type="number" id="ts-${id}" oninput="recalc()"></div>
+      <div class="field"><label>EP / EPH</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;">
+          <input type="number" id="ep-${id}" step="0.01" placeholder="EP">
+          <input type="number" id="eph-${id}" step="0.01" placeholder="EPH">
+        </div>
+      </div>
+      <div class="field"><label>VAM <span id="vam-${id}" style="font-size:13px;font-weight:700;color:var(--purple);">—</span> <span style="font-size:10px;color:var(--text3);">m/hr · 自動計算</span></label></div>
+      <div class="field"><label>RPE <span id="rv-${id}" class="rpe-num">5</span></label>
+        <div class="rpe-row"><input type="range" min="1" max="10" value="5" step="1" id="rp-${id}"
+          oninput="document.getElementById('rv-${id}').textContent=this.value;document.getElementById('rv-${id}').style.color=getRpeColor(+this.value);"></div>
+      </div>
+    </div>
+  </div>
+  <div class="comp-row">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <span style="font-size:11px;color:var(--text2);">Completion 完食率</span>
+      <span id="ct-${id}" class="comp-tag">—</span>
+    </div>
+    <div class="comp-bar-wrap">
+      <div class="comp-track"><div class="comp-fill" id="cf-${id}" style="width:0%;background:var(--green);"></div></div>
+      <span id="cp-${id}" style="font-size:11px;color:var(--text2);min-width:34px;text-align:right;">—</span>
+    </div>
+  </div>
+  </div>`;
+}
+
+function strFields(id) {
+  return `<div class="plan-exec">
+    <div class="plan-col">
+      <div class="col-lbl">Plan 課表</div>
+      <div class="field"><label>課表描述</label><textarea id="pd-${id}" rows="4" placeholder="貼上教練的肌力課表..."></textarea></div>
+    </div>
+    <div class="exec-col">
+      <div class="col-lbl">Actual 執行</div>
+      <div class="field"><label>時間 min</label><input type="number" id="ti-${id}" oninput="recalc()"></div>
+      <div class="field"><label>TSS</label><input type="number" id="ts-${id}" oninput="recalc()"></div>
+      <div class="field"><label>RPE <span id="rv-${id}" class="rpe-num">5</span></label>
+        <div class="rpe-row"><input type="range" min="1" max="10" value="5" step="1" id="rp-${id}"
+          oninput="document.getElementById('rv-${id}').textContent=this.value;document.getElementById('rv-${id}').style.color=getRpeColor(+this.value);"></div>
+      </div>
+      <div class="field"><label>完成度</label>
+        <select id="d-${id}" onchange="recalc()">
+          <option value="1">10成 — 全部完成</option><option value="0.8">8成</option>
+          <option value="0.6">6成</option><option value="0.5">5成</option><option value="0.3">3成以下</option>
+        </select>
+      </div>
+    </div>
+  </div>`;
+}
+
+function makeSess(di, si) {
+  const id = `d${di}s${si}`;
+  const div = document.createElement('div');
+  div.className = 'sess-block'; div.id = 'ss-'+id;
+  div.innerHTML = `<div class="sess-hdr">
+    <span class="sess-lbl">${si===0?'Session A':'Session B'}</span>
+    <select class="type-sel" id="tp-${id}" onchange="onType('${id}')">
+      ${SESS_TYPES.map(t=>`<option>${t}</option>`).join('')}
+    </select>
+    ${si>0?`<button onclick="remSess('${id}')" style="margin-left:auto;background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px;">✕ 移除</button>`:''}
+  </div>
+  <div id="flds-${id}"><p style="font-size:12px;color:var(--text3);padding:6px 0;">Rest — 無需填寫訓練數據</p></div>`;
+  return div;
+}
+
+function crossFields(id, type, distLabel, timeLabel) {
+  return `<div class="plan-exec">
+    <div class="plan-col">
+      <div class="col-lbl">Plan 課表</div>
+      <div class="field"><label>課表描述</label><textarea id="pd-${id}" rows="3" placeholder="訓練內容、強度安排..."></textarea></div>
+      <div class="field"><label>計畫${distLabel}</label><input type="number" id="pld-${id}" step="0.1" oninput="recalc()"></div>
+    </div>
+    <div class="exec-col">
+      <div class="col-lbl">Actual 執行</div>
+      <div class="field"><label>實際${distLabel}</label><input type="number" id="d-${id}" step="0.01" oninput="recalc()"></div>
+      <div class="field"><label>實際${timeLabel}</label><input type="text" id="ti-${id}" placeholder="1:00:00"></div>
+      <div class="field"><label>TSS</label><input type="number" id="ts-${id}" oninput="recalc()"></div>
+      <div class="field"><label>RPE <span id="rv-${id}" class="rpe-num">5</span></label>
+        <div class="rpe-row"><input type="range" min="1" max="10" value="5" step="1" id="rp-${id}"
+          oninput="document.getElementById('rv-${id}').textContent=this.value;document.getElementById('rv-${id}').style.color=getRpeColor(+this.value);"></div>
+      </div>
+    </div>
+  </div>
+  <div class="comp-row">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <span style="font-size:11px;color:var(--text2);">Completion 完食率</span>
+      <span id="ct-${id}" class="comp-tag">—</span>
+    </div>
+    <div class="comp-bar-wrap">
+      <div class="comp-track"><div class="comp-fill" id="cf-${id}" style="width:0%;background:var(--green);"></div></div>
+      <span id="cp-${id}" style="font-size:11px;color:var(--text2);min-width:34px;text-align:right;">—</span>
+    </div>
+  </div>`;
+}
+
+function onType(id) {
+  const t = document.getElementById('tp-'+id).value;
+  const c = document.getElementById('flds-'+id);
+  if(t==='Rest') c.innerHTML=`<p style="font-size:12px;color:var(--text3);padding:6px 0;">Rest — 無需填寫訓練數據</p>`;
+  else if(t==='Strength') c.innerHTML=strFields(id);
+  else if(t==='Running Ability Class') c.innerHTML=runFields(id,true);
+  else if(t==='Swimming') c.innerHTML=crossFields(id,'Swimming','距離 m','時間');
+  else if(t==='Cycling') c.innerHTML=crossFields(id,'Cycling','距離 km','時間');
+  else c.innerHTML=runFields(id,false);
+  updBadge(id[1]); recalc();
+}
+
+function updBadge(i) {
+  const A=document.getElementById('tp-d'+i+'s0');
+  const B=document.getElementById('tp-d'+i+'s1');
+  const badge=document.getElementById('bd-d'+i);
+  if(!badge||!A) return;
+  const tA=A.value, tB=B?B.value:null;
+  if(tB&&tB!=='Rest'){badge.className='d-badge db-double';badge.textContent=tA+' + '+tB;}
+  else{badge.className='d-badge '+(TYPE_BADGE[tA]||'db-rest');badge.textContent=tA;}
+}
+
+function addSess(i) {
+  const c=document.getElementById('ss-wrap-d'+i);
+  const btn=document.getElementById('ab-d'+i);
+  c.insertBefore(makeSess(i,1),btn); btn.style.display='none'; updBadge(i);
+}
+function remSess(id) {
+  const el=document.getElementById('ss-'+id); if(el)el.remove();
+  const i=id[1];
+  const btn=document.getElementById('ab-d'+i); if(btn)btn.style.display='flex';
+  updBadge(i); recalc();
+}
+
+function getMondayOfWeek(dateStr) {
+  if(!dateStr) return null;
+  const d = parseLocalDate(dateStr);
+  const dow = d.getDay(); // 0=Sun
+  const diff = dow === 0 ? -6 : 1 - dow;
+  d.setDate(d.getDate() + diff);
+  return d;
+}
+
+function buildCards() {
+  const c = document.getElementById('day-cards');
+  if(c.children.length>0) return;
+  const sv = document.getElementById('wk-start').value;
+  const monday = sv ? getMondayOfWeek(sv) : null;
+
+  DAYS.forEach((d,i)=>{
+    let ds='';
+    if(monday){
+      const dt=new Date(monday); dt.setDate(dt.getDate()+i);
+      ds=`${dt.getMonth()+1}/${dt.getDate()}`;
+    }
+    const card=document.createElement('div'); card.className='day-card';
+    card.innerHTML=`
+      <div class="day-hdr" onclick="togDay(${i})">
+        <div class="day-hdr-left">
+          <span class="day-lbl">${d.zh}<span style="font-size:10px;color:var(--text3);margin-left:3px;">${d.en}</span></span>
+          ${ds?`<span class="day-date">${ds}</span>`:''}
+          <span class="d-badge db-rest" id="bd-d${i}">Rest</span>
+        </div>
+        <span class="chevron" id="ch-${i}">▼</span>
+      </div>
+      <div class="day-body" id="db-${i}">
+        <div class="vitals-row">
+          <div class="field"><label>HRV</label><input type="number" id="hrv-d${i}" placeholder="—" oninput="recalc()"></div>
+          <div class="field"><label>Sleep Score</label><input type="number" id="sl-d${i}" placeholder="0–100" min="0" max="100" oninput="updSleep(${i})"></div>
+          <div class="field"><label>Sleep Time hr</label><input type="number" id="slt-d${i}" step="0.5" placeholder="7.5"></div>
+        </div>
+        <div id="ss-wrap-d${i}"></div>
+        <button class="add-sess-btn" id="ab-d${i}" onclick="addSess(${i})">+ 新增二練 Session B</button>
+        <div class="feeling-row"><div class="field"><label>Feeling 當天感受</label><textarea id="fl-d${i}" rows="2" placeholder="訓練後的狀態、特別想記錄的..."></textarea></div></div>
+      </div>`;
+    c.appendChild(card);
+    document.getElementById('ss-wrap-d'+i).appendChild(makeSess(i,0));
+  });
+}
+
+function togDay(i) {
+  document.getElementById('db-'+i).classList.toggle('open');
+  document.getElementById('ch-'+i).classList.toggle('open');
+}
+function updSleep(i) {
+  const el=document.getElementById('sl-d'+i); const v=parseInt(el.value);
+  el.style.color=v>=75?'var(--green)':v>=60?'var(--amber)':v>0?'var(--red)':'';
+  recalc();
+}
+
+function gv(id){const el=document.getElementById(id);return el?(parseFloat(el.value)||0):0;}
+function gs(id){const el=document.getElementById(id);return el?el.value:'';}
+
+function parseTimeToHrs(t) {
+  if(!t) return 0;
+  const parts = t.split(':').map(Number);
+  if(parts.length===3) return parts[0] + parts[1]/60 + parts[2]/3600;
+  if(parts.length===2) return parts[0] + parts[1]/60;
+  return 0;
+}
+
+function recalc() {
+  let td=0,te=0,tt=0,pd=0,ad=0,hS=0,hN=0,sS=0,sN=0,strN=0;
+  let vamSum=0,vamN=0;
+  DAYS.forEach((_,i)=>{
+    const h=gv('hrv-d'+i); if(h>0){hS+=h;hN++;}
+    const s=gv('sl-d'+i); if(s>0){sS+=s;sN++;}
+    [0,1].forEach(si=>{
+      const id=`d${i}s${si}`;
+      const tp=document.getElementById('tp-'+id); if(!tp)return;
+      const t=tp.value; if(t==='Rest')return;
+      tt+=gv('ts-'+id);
+      if(t==='Strength'){strN++;return;}
+      const dist=gv('d-'+id); td+=dist;
+      const ele=gv('el-'+id); te+=ele;
+      // VAM auto-calc
+      const timeStr=gs('ti-'+id);
+      const hrs=parseTimeToHrs(timeStr);
+      const vamEl=document.getElementById('vam-'+id);
+      if(ele>0&&hrs>0){
+        const vam=Math.round(ele/hrs);
+        if(vamEl) vamEl.textContent=vam;
+        vamSum+=vam; vamN++;
+      } else { if(vamEl) vamEl.textContent='—'; }
+      const pl=gv('pld-'+id);
+      if(pl>0){pd+=pl;ad+=dist;
+        const pct=Math.min(dist/pl*100,100);
+        const cf=document.getElementById('cf-'+id);
+        const cp=document.getElementById('cp-'+id);
+        const ct=document.getElementById('ct-'+id);
+        if(cf){cf.style.width=pct.toFixed(0)+'%';cf.style.background=pct>=90?'var(--green)':pct>=60?'var(--amber)':'var(--red)';}
+        if(cp) cp.textContent=pct.toFixed(0)+'%';
+        if(ct){ct.textContent=pct>=90?'✓ 完成':pct>=60?'部分完成':'未達標';ct.className='comp-tag '+(pct>=90?'full':pct>=60?'partial':'low');}
+      }
+    });
+  });
+  document.getElementById('t-dist').textContent=td>0?td.toFixed(1):'—';
+  document.getElementById('t-ele').textContent=te>0?te:'—';
+  document.getElementById('t-tss').textContent=tt>0?tt:'—';
+  document.getElementById('t-hrv').textContent=hN>0?(hS/hN).toFixed(0):'—';
+  document.getElementById('t-sleep').textContent=sN>0?(sS/sN).toFixed(0):'—';
+  document.getElementById('t-str').textContent=strN>0?strN+'次':'—';
+  const avgVam=vamN>0?Math.round(vamSum/vamN):0;
+  const tvam=document.getElementById('t-vam');
+  if(tvam) tvam.textContent=avgVam>0?avgVam+'':'—';
+  if(pd>0){
+    const r=(ad/pd*100).toFixed(0);
+    const el=document.getElementById('t-comp');el.textContent=r+'%';
+    el.style.color=r>=90?'var(--green)':r>=70?'var(--amber)':'var(--red)';
+  } else document.getElementById('t-comp').textContent='—';
+}
+
+function collectWeekData() {
+  const days = DAYS.map((_,i)=>{
+    const sessions = [0,1].map(si=>{
+      const id=`d${i}s${si}`;
+      const tp=document.getElementById('tp-'+id); if(!tp) return null;
+      return {
+        type:tp.value, dist:gv('d-'+id), ele:gv('el-'+id), time:gs('ti-'+id),
+        pace:gs('pa-'+id), tss:gv('ts-'+id), ep:gv('ep-'+id), eph:gv('eph-'+id),
+        rpe:gv('rp-'+id), planDesc:gs('pd-'+id), planDist:gv('pld-'+id), planPace:gs('plp-'+id),
+      };
+    }).filter(Boolean);
+    const primary = sessions[0]||{};
+    return {
+      day:DAYS[i].zh, type:primary.type||'Rest', dist:primary.dist||0,
+      ele:primary.ele||0, tss:sessions.reduce((s,x)=>s+(x.tss||0),0),
+      hrv:gv('hrv-d'+i), sleep:gv('sl-d'+i), sleepHr:gv('slt-d'+i),
+      feeling:gs('fl-d'+i), sessions,
+    };
+  });
+  const totTss=days.reduce((s,d)=>s+d.tss,0);
+  const hrvVals=days.filter(d=>d.hrv>0);
+  const slpVals=days.filter(d=>d.sleep>0);
+  const avgHrv=hrvVals.length?(hrvVals.reduce((s,d)=>s+d.hrv,0)/hrvVals.length).toFixed(0):0;
+  const avgSleep=slpVals.length?(slpVals.reduce((s,d)=>s+d.sleep,0)/slpVals.length).toFixed(0):0;
+  // Compute totals directly from days (don't rely on DOM display values)
+  const totDist=parseFloat(days.reduce((s,d)=>s+(d.dist||0),0).toFixed(2));
+  const totEle=days.reduce((s,d)=>s+(d.ele||0),0);
+  const comp=document.getElementById('t-comp').textContent.replace('%','');
+  const avgVam=parseInt(document.getElementById('t-vam').textContent)||0;
+  const inputDate = gs('wk-start');
+  const mondayDate = getMondayOfWeek(inputDate);
+  const startDate = mondayDate ? `${mondayDate.getFullYear()}-${String(mondayDate.getMonth()+1).padStart(2,'0')}-${String(mondayDate.getDate()).padStart(2,'0')}` : inputDate;
+  const phase=document.getElementById('wk-phase').options[document.getElementById('wk-phase').selectedIndex].text;
+  return {
+    label:gs('wk-label')||'W?', startDate, phase,
+    goal:gs('wk-goal'), coachFeedback:gs('wk-coach-feedback'), days,
+    total:{dist:totDist,ele:totEle,tss:totTss,avgHrv:parseFloat(avgHrv),avgSleep:parseFloat(avgSleep),comp:parseFloat(comp)||0,avgVam},
+  };
+}
+
+function newWeek() {
+  if(!confirm('清空表單開始填新的一週？（已儲存的數據不會消失）')) return;
+  document.getElementById('wk-label').value = '';
+  document.getElementById('wk-start').value = getThisMonday();
+  document.getElementById('wk-goal').value = '';
+  document.getElementById('wk-coach-feedback').value = '';
+  document.getElementById('day-cards').innerHTML = '';
+  buildCards();
+  document.getElementById('save-msg').textContent = '';
+}
+
+function saveWeek() {
+  try {
+    recalc(); // 確保畫面數值最新
+    const w = collectWeekData();
+    if(!w.label || w.label==='W?') {
+      document.getElementById('save-msg').textContent='⚠ 請先填寫週次（例：W3）';
+      return;
+    }
+    const existing = state.weeks.findIndex(x=>x.label===w.label);
+    if(existing>=0) state.weeks[existing]=w; else state.weeks.push(w);
+    saveState();
+    updateOverview();
+    renderCal();
+    updateWeekSelector();
+    document.getElementById('week-selector').value = w.label;
+    const msg=document.getElementById('save-msg');
+    msg.textContent=`✓ ${w.label} 已儲存！共 ${state.weeks.length} 週數據。`;
+    msg.style.color='var(--green)';
+    checkBackupReminder();
+    setTimeout(()=>{msg.style.color='';},5000);
+  } catch(e) {
+    const msg=document.getElementById('save-msg');
+    msg.textContent='✕ 儲存失敗：'+e.message;
+    msg.style.color='var(--red)';
+  }
+}
+
+function sendToAI() {
+  const w = getCurrentWeek();
+  if(!w) {
+    document.getElementById('save-msg').textContent='⚠ 請先按「儲存本週」';
+    return;
+  }
+  const T=w.total;
+  const feelings=w.days.map(d=>d.feeling?`${d.day}：${d.feeling}`:null).filter(Boolean).join('；');
+  const msg=`${w.label}（${w.phase}）訓練總結。目標：「${w.goal}」。距離${T.dist}km、爬升${T.ele}m、TSS ${T.tss}、平均HRV ${T.avgHrv}、平均睡眠分數${T.avgSleep}、完食率${T.comp}%、均VAM ${T.avgVam}m/hr。當週感受：${feelings||'無'}。目標：2026/11/21 Formosa Trail 75K（75km、4100m爬升）。請分析本週狀態，指出值得注意的地方，並給下週具體建議。`;
+  if(typeof sendPrompt!=='undefined') {
+    sendPrompt(msg);
+  } else {
+    navigator.clipboard.writeText(msg).then(()=>{
+      document.getElementById('save-msg').textContent='✓ 分析內容已複製！貼到 Claude 對話即可分析。';
+    }).catch(()=>{
+      document.getElementById('save-msg').textContent='請在 Claude 對話中的 Artifact 裡使用 AI 分析功能';
+    });
+  }
+}
+
+document.getElementById('wk-start').addEventListener('change', function() {
+  if(this._restoring) return;
+  // Snap to Monday of selected week
+  const mon = getMondayOfWeek(this.value);
+  if(mon) {
+    const monStr = `${mon.getFullYear()}-${String(mon.getMonth()+1).padStart(2,'0')}-${String(mon.getDate()).padStart(2,'0')}`;
+    this.value = monStr;
+  }
+  document.getElementById('day-cards').innerHTML=''; buildCards();
+});
+
+// ════════════════════════════════════════
+// CTL / ATL / TSB
+// ════════════════════════════════════════
+function calcCTLATL() {
+  if(state.weeks.length===0) return {ctl:0,atl:0,series:[]};
+  let ctl=0, atl=0;
+  const series=[];
+  state.weeks.forEach(w=>{
+    const dailyTss=(w.total.tss||0)/7;
+    for(let d=0;d<7;d++){
+      ctl = ctl*(1-1/42) + dailyTss*(1/42);
+      atl = atl*(1-1/7) + dailyTss*(1/7);
+      series.push({ctl:Math.round(ctl*10)/10,atl:Math.round(atl*10)/10,tsb:Math.round((ctl-atl)*10)/10});
+    }
+  });
+  return {ctl,atl,series};
+}
+
+// ════════════════════════════════════════
+// TRENDS CHARTS
+// ════════════════════════════════════════
+let charts={};
+function destroyChart(k){if(charts[k]){charts[k].destroy();delete charts[k];}}
+
+function chartOpts(yMin,yMax,extra={}){
+  const isDark=matchMedia('(prefers-color-scheme:dark)').matches;
+  const gc=isDark?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.05)';
+  const tc=isDark?'#9E9B96':'#6B6760';
+  return {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{display:false},...(extra.plugins||{})},
+    scales:{
+      x:{ticks:{color:tc,font:{size:11}},grid:{color:gc}},
+      y:{min:yMin,max:yMax,ticks:{color:tc,font:{size:11}},grid:{color:gc}},
+      ...(extra.scales||{})
+    },
+    ...(extra.base||{})
+  };
+}
+
+function renderCharts() {
+  const W = state.weeks;
+  const isDark=matchMedia('(prefers-color-scheme:dark)').matches;
+  // fallback demo data
+  const allW = W.length>0 ? W : [{label:'W2',total:{dist:47.75,ele:1144,tss:4531,avgHrv:62,avgSleep:73,ep:59.19},days:[
+    {hrv:68,sleep:75},{hrv:76,sleep:72},{hrv:65,sleep:81},{hrv:64,sleep:45},{hrv:0,sleep:67},{hrv:59,sleep:0},{hrv:56,sleep:70}
+  ]}];
+
+  const wLabels = allW.map(w=>w.label);
+  const distSeries = allW.map(w=>w.total.dist||0);
+  const eleSeries = allW.map(w=>w.total.ele||0);
+  const tssSeries = allW.map(w=>w.total.tss||0);
+  const epSeries = allW.map(w=>w.total.ep||0);
+
+  const lastW = allW[allW.length-1];
+  const dLabels = DAYS.map(d=>`${lastW.label} ${d.zh}`);
+  const hrvD = lastW.days ? lastW.days.map(d=>d.hrv||null) : [];
+  const slpD = lastW.days ? lastW.days.map(d=>d.sleep||null) : [];
+
+  // Volume
+  destroyChart('vol');
+  charts['vol'] = new Chart(document.getElementById('c-vol'),{
+    type:'bar',
+    data:{labels:wLabels,datasets:[
+      {label:'距離 km',data:distSeries,backgroundColor:'#2D6A2D',borderRadius:4,yAxisID:'y'},
+      {label:'爬升 m',data:eleSeries,backgroundColor:'#C45C1A',borderRadius:4,yAxisID:'y1'},
+    ]},
+    options:{...chartOpts(0,undefined),plugins:{legend:{display:true,labels:{color:isDark?'#9E9B96':'#6B6760',font:{size:11}}}},
+      scales:{
+        x:{ticks:{color:isDark?'#9E9B96':'#6B6760',font:{size:11}},grid:{color:isDark?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.05)'}},
+        y:{position:'left',ticks:{color:'#2D6A2D',font:{size:11}},grid:{color:isDark?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.05)'}},
+        y1:{position:'right',ticks:{color:'#C45C1A',font:{size:11}},grid:{drawOnChartArea:false}},
+      },
+      responsive:true,maintainAspectRatio:false,
+    }
+  });
+
+  // TSS
+  destroyChart('tss');
+  charts['tss'] = new Chart(document.getElementById('c-tss'),{
+    type:'bar',
+    data:{labels:wLabels,datasets:[{data:tssSeries,backgroundColor:'#1A5FA8',borderRadius:4}]},
+    options:chartOpts(0,undefined)
+  });
+
+  // CTL/ATL/TSB
+  const {series:ctlSeries} = calcCTLATL();
+  destroyChart('ctl');
+  if(ctlSeries.length>0){
+    const ctlLabels = ctlSeries.map((_,i)=>'D'+(i+1));
+    charts['ctl'] = new Chart(document.getElementById('c-ctl'),{
+      type:'line',
+      data:{labels:ctlLabels,datasets:[
+        {label:'CTL',data:ctlSeries.map(s=>s.ctl),borderColor:'#1A5FA8',backgroundColor:'transparent',tension:.4,pointRadius:0,borderWidth:2},
+        {label:'ATL',data:ctlSeries.map(s=>s.atl),borderColor:'#C45C1A',backgroundColor:'transparent',tension:.4,pointRadius:0,borderWidth:2},
+        {label:'TSB',data:ctlSeries.map(s=>s.tsb),borderColor:'#2D6A2D',backgroundColor:'rgba(45,106,45,0.08)',fill:true,tension:.4,pointRadius:0,borderWidth:2},
+      ]},
+      options:{...chartOpts(undefined,undefined),plugins:{legend:{display:false}},responsive:true,maintainAspectRatio:false}
+    });
+  }
+
+  // HRV
+  destroyChart('hrv');
+  charts['hrv'] = new Chart(document.getElementById('c-hrv'),{
+    type:'line',
+    data:{labels:dLabels,datasets:[{data:hrvD,borderColor:'#2D6A2D',backgroundColor:'rgba(45,106,45,0.08)',fill:true,tension:.3,pointRadius:4,spanGaps:true}]},
+    options:chartOpts(40,90)
+  });
+
+  // Sleep
+  destroyChart('sleep');
+  charts['sleep'] = new Chart(document.getElementById('c-sleep'),{
+    type:'bar',
+    data:{labels:dLabels,datasets:[{data:slpD,backgroundColor:slpD.map(v=>!v?'transparent':v>=75?'#2D6A2D':v>=60?'#8C5A0A':'#A32D2D'),borderRadius:4}]},
+    options:chartOpts(0,100)
+  });
+
+  // EP
+  destroyChart('ep');
+  charts['ep'] = new Chart(document.getElementById('c-ep'),{
+    type:'line',
+    data:{labels:wLabels,datasets:[{data:epSeries,borderColor:'#4B3B9E',backgroundColor:'rgba(75,59,158,0.08)',fill:true,tension:.3,pointRadius:5}]},
+    options:chartOpts(0,undefined)
+  });
+
+  // VAM
+  const vamSeries = allW.map(w=>w.total.avgVam||0);
+  destroyChart('vam');
+  charts['vam'] = new Chart(document.getElementById('c-vam'),{
+    type:'line',
+    data:{labels:wLabels,datasets:[{data:vamSeries,borderColor:'#C45C1A',backgroundColor:'rgba(196,92,26,0.08)',fill:true,tension:.3,pointRadius:5,spanGaps:true}]},
+    options:chartOpts(0,undefined)
+  });
+}
+
+// ════════════════════════════════════════
+// RACES
+// ════════════════════════════════════════
+function renderRaces() {
+  const list=document.getElementById('race-list'); list.innerHTML='';
+  const today=new Date();
+  [...state.races].sort((a,b)=>parseLocalDate(a.date)-parseLocalDate(b.date)).forEach(r=>{
+    const diff=Math.ceil((parseLocalDate(r.date)-today)/86400000);
+    const div=document.createElement('div');
+    div.className='race-item'+(r.type==='target'?' is-target':'');
+    div.innerHTML=`<div class="race-dot ${r.type}"></div>
+      <div style="flex:1;">
+        <div class="race-name">${r.name}</div>
+        <div class="race-meta">${r.date} · ${r.km}km · ${r.ele}m↑ · EP ${r.ep} · ${r.type==='target'?'目標賽事':'以賽代訓'}</div>
+      </div>
+      <div class="race-badge ${diff<=0?'rb-past':r.type==='target'?'rb-target':'rb-tune'}">${diff<=0?'已結束':diff+'天後'}</div>`;
+    list.appendChild(div);
+  });
+}
+
+function addRace() {
+  const n=document.getElementById('r-name').value;
+  const d=document.getElementById('r-date').value;
+  if(!n||!d) return;
+  state.races.push({name:n,date:d,km:parseFloat(document.getElementById('r-km').value)||0,ele:parseFloat(document.getElementById('r-ele-r').value)||0,ep:parseFloat(document.getElementById('r-ep').value)||0,type:document.getElementById('r-type').value});
+  saveState(); renderRaces();
+  ['r-name','r-date','r-km','r-ele-r','r-ep'].forEach(id=>document.getElementById(id).value='');
+}
+
+// ════════════════════════════════════════
+// REFRESH ALL & INIT
+// ════════════════════════════════════════
+function refreshAll() {
+  renderCal(); updateOverview(); renderRaces();
+}
+
+function getThisMonday() {
+  const today = new Date();
+  const dow = today.getDay();
+  const diff = dow === 0 ? -6 : 1 - dow;
+  const mon = new Date(today);
+  mon.setDate(today.getDate() + diff);
+  return `${mon.getFullYear()}-${String(mon.getMonth()+1).padStart(2,'0')}-${String(mon.getDate()).padStart(2,'0')}`;
+}
+
+function restoreInputFromState(w) {
+  if(!w) return;
+  // Temporarily disable the date change listener to avoid double rebuild
+  const startEl = document.getElementById('wk-start');
+  startEl._restoring = true;
+
+  document.getElementById('wk-label').value = w.label || '';
+  startEl.value = w.startDate || getThisMonday();
+  const phaseEl = document.getElementById('wk-phase');
+  const phaseMap = {'預備期':'prep','提升期':'build','專項期':'specific','減量期':'taper','比賽週':'race','恢復週':'recovery'};
+  if(w.phase && phaseMap[w.phase]) phaseEl.value = phaseMap[w.phase];
+  document.getElementById('wk-goal').value = w.goal || '';
+  document.getElementById('wk-coach-feedback').value = w.coachFeedback || '';
+
+  // Rebuild cards with date
+  document.getElementById('day-cards').innerHTML = '';
+  buildCards();
+  startEl._restoring = false;
+
+  // Fill day data
+  if(!w.days) return;
+  w.days.forEach((day, i) => {
+    if(day.hrv) document.getElementById('hrv-d'+i).value = day.hrv;
+    if(day.sleep) { document.getElementById('sl-d'+i).value = day.sleep; updSleep(i); }
+    if(day.sleepHr) document.getElementById('slt-d'+i).value = day.sleepHr;
+    if(day.feeling) document.getElementById('fl-d'+i).value = day.feeling;
+    const primary = day.sessions && day.sessions[0];
+    if(!primary || primary.type === 'Rest') return;
+    const tp = document.getElementById('tp-d'+i+'s0');
+    if(!tp) return;
+    tp.value = primary.type;
+    onType('d'+i+'s0');
+    setTimeout(()=>{
+      const S=(f,v)=>{const el=document.getElementById(f);if(el&&v!==undefined&&v!==null&&v!=='')el.value=v;};
+      S('pd-d'+i+'s0', primary.planDesc);
+      S('pld-d'+i+'s0', primary.planDist);
+      S('plp-d'+i+'s0', primary.planPace);
+      S('d-d'+i+'s0', primary.dist);
+      S('ti-d'+i+'s0', primary.time);
+      S('pa-d'+i+'s0', primary.pace);
+      S('el-d'+i+'s0', primary.ele);
+      S('ts-d'+i+'s0', primary.tss);
+      S('ep-d'+i+'s0', primary.ep);
+      S('eph-d'+i+'s0', primary.eph);
+      const rEl=document.getElementById('rp-d'+i+'s0');
+      const rV=document.getElementById('rv-d'+i+'s0');
+      if(rEl && primary.rpe){rEl.value=primary.rpe;rV.textContent=primary.rpe;rV.style.color=getRpeColor(primary.rpe);}
+      recalc();
+    }, 50);
+  });
+  setTimeout(recalc, 300);
+}
+
+function migrateData() {
+  // Normalize all week startDates to Monday
+  state.weeks.forEach(w => {
+    if(w.startDate) {
+      const mon = getMondayOfWeek(w.startDate);
+      if(mon) {
+        w.startDate = `${mon.getFullYear()}-${String(mon.getMonth()+1).padStart(2,'0')}-${String(mon.getDate()).padStart(2,'0')}`;
+      }
+    }
+  });
+}
+
+loadState();
+migrateData();
+saveState();
+updateCountdown();
+updateWeekSelector();
+// Auto-set this Monday
+document.getElementById('wk-start').value = getThisMonday();
+buildCards();
+// Restore last saved week into input form
+if(state.weeks.length > 0) {
+  restoreInputFromState(state.weeks[state.weeks.length-1]);
+}
+renderCal();
+updateOverview();
+</script>
+</body>
+</html>
