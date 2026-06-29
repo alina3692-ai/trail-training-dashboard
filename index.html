@@ -1087,21 +1087,24 @@ function runFields(id, isClass) {
       <div class="col-lbl">Plan 課表</div>
       <div class="field"><label>課表描述</label><textarea id="pd-${id}" rows="3" placeholder="${isClass ? '上課內容、動作、組數...' : '貼上 TrainingPeaks 課表內容...'}"></textarea></div>
       <div class="field"><label>計畫距離 km</label><input type="number" id="pld-${id}" step="0.1" oninput="recalc()"></div>
-      <div class="field"><label>計畫配速</label><input type="text" id="plp-${id}" placeholder="5:30/km"></div>
+      <div class="field"><label>計畫配速</label><input type="text" id="plp-${id}" placeholder="5:30/km" oninput="calcPaceDiff('${id}')"></div>
     </div>`;
   return `<div class="plan-exec">
     ${planSection}
     <div class="exec-col">
       <div class="col-lbl">Actual 執行</div>
-      <div class="field"><label>實際距離 km</label><input type="number" id="d-${id}" step="0.01" oninput="recalc()"></div>
-      <div class="field"><label>實際時間</label><input type="text" id="ti-${id}" placeholder="1:20:00"></div>
-      <div class="field"><label>實際配速</label><input type="text" id="pa-${id}" placeholder="8:32/km"></div>
-      <div class="field"><label>爬升 m</label><input type="number" id="el-${id}" oninput="recalc()"></div>
+      <div class="field"><label>實際距離 km</label><input type="number" id="d-${id}" step="0.01" oninput="recalc();calcEpEph('${id}')"></div>
+      <div class="field"><label>實際時間</label><input type="text" id="ti-${id}" placeholder="1:20:00" oninput="recalc();calcEpEph('${id}')"></div>
+      <div class="field">
+        <label>實際配速 <span id="pace-diff-${id}" style="font-size:11px;margin-left:6px;"></span></label>
+        <input type="text" id="pa-${id}" placeholder="8:32/km" oninput="calcPaceDiff('${id}')">
+      </div>
+      <div class="field"><label>爬升 m</label><input type="number" id="el-${id}" oninput="recalc();calcEpEph('${id}')"></div>
       <div class="field"><label>TSS</label><input type="number" id="ts-${id}" oninput="recalc()"></div>
-      <div class="field"><label>EP / EPH</label>
+      <div class="field"><label>EP / EPH <span style="font-size:10px;color:var(--text3);">· 自動計算</span></label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;">
-          <input type="number" id="ep-${id}" step="0.01" placeholder="EP">
-          <input type="number" id="eph-${id}" step="0.01" placeholder="EPH">
+          <input type="number" id="ep-${id}" step="0.01" placeholder="EP" readonly style="background:var(--surface2);cursor:default;">
+          <input type="number" id="eph-${id}" step="0.01" placeholder="EPH" readonly style="background:var(--surface2);cursor:default;">
         </div>
       </div>
       <div class="field"><label>VAM <span id="vam-${id}" style="font-size:13px;font-weight:700;color:var(--purple);">—</span> <span style="font-size:10px;color:var(--text3);">m/hr · 自動計算</span></label></div>
@@ -1292,6 +1295,72 @@ function parseTimeToHrs(t) {
   if(parts.length===3) return parts[0] + parts[1]/60 + parts[2]/3600;
   if(parts.length===2) return parts[0] + parts[1]/60;
   return 0;
+}
+
+// 配速字串轉分鐘數（"5:30/km" or "5:30" → 5.5）
+function paceToMins(str) {
+  if(!str) return 0;
+  const clean = str.replace('/km','').trim();
+  const parts = clean.split(':');
+  if(parts.length===2) return parseInt(parts[0]||0) + parseInt(parts[1]||0)/60;
+  return 0;
+}
+
+// 分鐘數轉配速字串（5.5 → "5:30"）
+function minsToPackStr(mins) {
+  const m = Math.floor(mins);
+  const s = Math.round((mins - m) * 60);
+  return `${m}:${String(s).padStart(2,'0')}`;
+}
+
+// EP / EPH 自動計算
+function calcEpEph(id) {
+  const dist = parseFloat(document.getElementById('d-'+id)?.value) || 0;
+  const ele  = parseFloat(document.getElementById('el-'+id)?.value) || 0;
+  const timeStr = document.getElementById('ti-'+id)?.value || '';
+  const hrs = parseTimeToHrs(timeStr);
+  const epEl  = document.getElementById('ep-'+id);
+  const ephEl = document.getElementById('eph-'+id);
+  if(!epEl || !ephEl) return;
+  if(dist > 0 || ele > 0) {
+    const ep = parseFloat((dist + ele/100).toFixed(2));
+    epEl.value = ep;
+    if(hrs > 0) {
+      ephEl.value = parseFloat((ep / hrs).toFixed(2));
+    } else {
+      ephEl.value = '';
+    }
+  } else {
+    epEl.value = '';
+    ephEl.value = '';
+  }
+}
+
+// 配速差異提醒
+function calcPaceDiff(id) {
+  const planPace = gs('plp-'+id);
+  const actualPace = gs('pa-'+id);
+  const diffEl = document.getElementById('pace-diff-'+id);
+  if(!diffEl) return;
+  const planMins = paceToMins(planPace);
+  const actualMins = paceToMins(actualPace);
+  if(planMins > 0 && actualMins > 0) {
+    const diffMins = actualMins - planMins; // 正 = 比計畫慢，負 = 比計畫快
+    const absDiff = Math.abs(diffMins);
+    const diffStr = minsToPackStr(absDiff);
+    if(Math.abs(diffMins) < 0.08) { // 約5秒內視為相同
+      diffEl.textContent = '✓ 符合計畫';
+      diffEl.style.color = 'var(--green)';
+    } else if(diffMins > 0) {
+      diffEl.textContent = `▲ 慢 ${diffStr}`;
+      diffEl.style.color = 'var(--red)';
+    } else {
+      diffEl.textContent = `▼ 快 ${diffStr}`;
+      diffEl.style.color = 'var(--amber)';
+    }
+  } else {
+    diffEl.textContent = '';
+  }
 }
 
 function recalc() {
@@ -1681,6 +1750,8 @@ function restoreInputFromState(w) {
       const rEl=document.getElementById('rp-d'+i+'s0');
       const rV=document.getElementById('rv-d'+i+'s0');
       if(rEl && primary.rpe){rEl.value=primary.rpe;rV.textContent=primary.rpe;rV.style.color=getRpeColor(primary.rpe);}
+      calcPaceDiff('d'+i+'s0');
+      calcEpEph('d'+i+'s0');
       recalc();
     }, 50);
   });
