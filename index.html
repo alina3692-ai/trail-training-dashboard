@@ -1082,32 +1082,34 @@ function renderCal() {
 // ════════════════════════════════════════
 function getRpeColor(v){return v<=3?'#2D6A2D':v<=6?'#8C5A0A':v<=8?'#C45C1A':'#A32D2D';}
 
-function runFields(id, isClass) {
+function runFields(id, isClass, isTrail) {
   const planSection = `<div class="plan-col">
       <div class="col-lbl">Plan 課表</div>
       <div class="field"><label>課表描述</label><textarea id="pd-${id}" rows="3" placeholder="${isClass ? '上課內容、動作、組數...' : '貼上 TrainingPeaks 課表內容...'}"></textarea></div>
       <div class="field"><label>計畫距離 km</label><input type="number" id="pld-${id}" step="0.1" oninput="recalc()"></div>
       <div class="field"><label>計畫配速</label><input type="text" id="plp-${id}" placeholder="5:30/km" oninput="calcPaceDiff('${id}')"></div>
     </div>`;
-  return `<div class="plan-exec">
-    ${planSection}
-    <div class="exec-col">
-      <div class="col-lbl">Actual 執行</div>
-      <div class="field"><label>實際距離 km</label><input type="number" id="d-${id}" step="0.01" oninput="recalc();calcEpEph('${id}')"></div>
-      <div class="field"><label>實際時間</label><input type="text" id="ti-${id}" placeholder="1:20:00" oninput="recalc();calcEpEph('${id}')"></div>
-      <div class="field">
-        <label>實際配速 <span id="pace-diff-${id}" style="font-size:11px;margin-left:6px;"></span></label>
-        <input type="text" id="pa-${id}" placeholder="8:32/km" oninput="calcPaceDiff('${id}')">
-      </div>
-      <div class="field"><label>爬升 m</label><input type="number" id="el-${id}" oninput="recalc();calcEpEph('${id}')"></div>
-      <div class="field"><label>TSS</label><input type="number" id="ts-${id}" oninput="recalc()"></div>
+  const trailOnly = isTrail ? `
       <div class="field"><label>EP / EPH <span style="font-size:10px;color:var(--text3);">· 自動計算</span></label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;">
           <input type="number" id="ep-${id}" step="0.01" placeholder="EP" readonly style="background:var(--surface2);cursor:default;">
           <input type="number" id="eph-${id}" step="0.01" placeholder="EPH" readonly style="background:var(--surface2);cursor:default;">
         </div>
       </div>
-      <div class="field"><label>VAM <span id="vam-${id}" style="font-size:13px;font-weight:700;color:var(--purple);">—</span> <span style="font-size:10px;color:var(--text3);">m/hr · 自動計算</span></label></div>
+      <div class="field"><label>VAM <span id="vam-${id}" style="font-size:13px;font-weight:700;color:var(--purple);">—</span> <span style="font-size:10px;color:var(--text3);">m/hr · 自動計算</span></label></div>` : '';
+  return `<div class="plan-exec">
+    ${planSection}
+    <div class="exec-col">
+      <div class="col-lbl">Actual 執行</div>
+      <div class="field"><label>實際距離 km</label><input type="number" id="d-${id}" step="0.01" oninput="recalc();${isTrail?`calcEpEph('${id}')`:''};"></div>
+      <div class="field"><label>實際時間</label><input type="text" id="ti-${id}" placeholder="1:20:00" oninput="recalc();${isTrail?`calcEpEph('${id}')`:''};"></div>
+      <div class="field">
+        <label>實際配速 <span id="pace-diff-${id}" style="font-size:11px;margin-left:6px;"></span></label>
+        <input type="text" id="pa-${id}" placeholder="8:32/km" oninput="calcPaceDiff('${id}')">
+      </div>
+      <div class="field"><label>爬升 m</label><input type="number" id="el-${id}" oninput="recalc();${isTrail?`calcEpEph('${id}')`:''};"></div>
+      <div class="field"><label>TSS</label><input type="number" id="ts-${id}" oninput="recalc()"></div>
+      ${trailOnly}
       <div class="field"><label>RPE <span id="rv-${id}" class="rpe-num">5</span></label>
         <div class="rpe-row"><input type="range" min="1" max="10" value="5" step="1" id="rp-${id}"
           oninput="document.getElementById('rv-${id}').textContent=this.value;document.getElementById('rv-${id}').style.color=getRpeColor(+this.value);"></div>
@@ -1201,10 +1203,11 @@ function onType(id) {
   const c = document.getElementById('flds-'+id);
   if(t==='Rest') c.innerHTML=`<p style="font-size:12px;color:var(--text3);padding:6px 0;">Rest — 無需填寫訓練數據</p>`;
   else if(t==='Strength') c.innerHTML=strFields(id);
-  else if(t==='Running Ability Class') c.innerHTML=runFields(id,true);
+  else if(t==='Running Ability Class') c.innerHTML=runFields(id,true,false);
   else if(t==='Swimming') c.innerHTML=crossFields(id,'Swimming','距離 m','時間');
   else if(t==='Cycling') c.innerHTML=crossFields(id,'Cycling','距離 km','時間');
-  else c.innerHTML=runFields(id,false);
+  else if(t==='Trail Run') c.innerHTML=runFields(id,false,true);
+  else c.innerHTML=runFields(id,false,false);
   updBadge(id[1]); recalc();
 }
 
@@ -1377,11 +1380,11 @@ function recalc() {
       if(t==='Strength'){strN++;return;}
       const dist=gv('d-'+id); td+=dist;
       const ele=gv('el-'+id); te+=ele;
-      // VAM auto-calc
+      // VAM auto-calc (Trail Run only)
       const timeStr=gs('ti-'+id);
       const hrs=parseTimeToHrs(timeStr);
       const vamEl=document.getElementById('vam-'+id);
-      if(ele>0&&hrs>0){
+      if(t==='Trail Run' && ele>0&&hrs>0){
         const vam=Math.round(ele/hrs);
         if(vamEl) vamEl.textContent=vam;
         vamSum+=vam; vamN++;
@@ -1751,7 +1754,7 @@ function restoreInputFromState(w) {
       const rV=document.getElementById('rv-d'+i+'s0');
       if(rEl && primary.rpe){rEl.value=primary.rpe;rV.textContent=primary.rpe;rV.style.color=getRpeColor(primary.rpe);}
       calcPaceDiff('d'+i+'s0');
-      calcEpEph('d'+i+'s0');
+      if(primary.type==='Trail Run') calcEpEph('d'+i+'s0');
       recalc();
     }, 50);
   });
