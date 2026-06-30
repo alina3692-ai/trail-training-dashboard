@@ -132,6 +132,9 @@
   .cal-tune-lbl { font-size: 9px; font-weight: 600; color: var(--blue); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .cal-rest { font-size: 10px; color: var(--text3); margin-top: 6px; }
   .cal-tss { font-size: 9px; color: var(--text3); }
+  .cal-sess-item { font-size: 9px; line-height: 1.35; margin-top: 2px; padding: 1px 4px; border-radius: 4px; background: rgba(0,0,0,0.04); }
+  .cal-sess-item .cs-type { font-weight: 600; color: var(--text); }
+  .cal-sess-item .cs-stat { color: var(--text2); }
   .month-sum { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 20px; }
   .ms-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; text-align: center; }
   .ms-val { font-size: 17px; font-weight: 600; }
@@ -301,7 +304,7 @@
 
   <div class="ai-box" id="ov-ai">
     <div class="ai-label"><span class="ai-dot"></span>本週摘要</div>
-    <p id="ov-ai-text" style="color:var(--text2);">儲存本週數據後，這裡會顯示訓練摘要。<br>按下方「✦ AI 分析 ↗」可複製數據到 Claude 對話獲得深度分析。</p>
+    <p id="ov-ai-text" style="color:var(--text2);">填完輸入頁後按「💾 確認並更新總覽/月曆」，這裡會顯示訓練摘要。<br>按下方「✦ AI 分析 ↗」可複製數據到 Claude 對話獲得深度分析。</p>
   </div>
 
   <div class="quick-btns" id="ov-quick">
@@ -375,7 +378,7 @@
       <div class="tc"><div class="tc-val" id="t-vam">—</div><div class="tc-lbl">均 VAM m/hr</div></div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      <button class="btn-primary" onclick="saveWeek()">💾 儲存本週</button>
+      <button class="btn-primary" onclick="saveWeek()">💾 確認並更新總覽/月曆</button>
       <button class="btn-ghost" onclick="sendToAI()">✦ AI 分析 ↗</button>
       <button class="btn-ghost" onclick="recalc()">重新計算</button>
     </div>
@@ -1053,19 +1056,37 @@ function renderCal() {
       if(race.km) h+=`<div style="font-size:9px;color:var(--text2);">${race.km}km·${race.ele}m↑</div>`;
     } else if(wk) {
       const type=wk.type||'Rest';
-      if(type!=='Rest'&&wk.dist>0){
-        const cls={'Trail Run':'c-trail','Run':'c-run','Running Ability Class':'c-class','Strength':'c-strength','Swimming':'c-swim','Cycling':'c-cycle'}[type]||'';
+      // Gather all real sessions (not Rest) for this day
+      const realSessions = (wk.sessions||[]).filter(s=>s.type && s.type!=='Rest');
+      const hasTraining = type!=='Rest' && (wk.dist>0||wk.ele>0||wk.tss>0) || realSessions.length>0;
+      if(hasTraining){
+        const clsMap={'Trail Run':'c-trail','Run':'c-run','Running Ability Class':'c-class','Strength':'c-strength','Swimming':'c-swim','Cycling':'c-cycle'};
+        // Use first real session's type for the cell border color
+        const primaryType = realSessions[0] ? realSessions[0].type : type;
+        const cls=clsMap[primaryType]||'';
         if(cls) cell.classList.add(cls);
-        h+=`<div class="cal-dist">${wk.dist}<span style="font-size:9px;color:var(--text2);">km</span></div>`;
-        h+=`<div class="cal-type-label">${type}</div>`;
-        if(wk.tss) h+=`<div class="cal-tss">TSS ${wk.tss}</div>`;
-        mDist+=wk.dist; mEle+=wk.ele||0; mTss+=wk.tss||0; mTrain++;
+        if(realSessions.length>0) {
+          // Show each session individually
+          realSessions.forEach(s=>{
+            const stat = s.type==='Strength'
+              ? (s.time?`${s.time}min`:'')
+              : [s.dist>0?`${s.dist}km`:'', s.ele>0?`${s.ele}m↑`:''].filter(Boolean).join(' · ');
+            h+=`<div class="cal-sess-item"><span class="cs-type">${s.type}</span>${stat?' · <span class="cs-stat">'+stat+'</span>':''}</div>`;
+          });
+          if(wk.tss>0) h+=`<div class="cal-tss">TSS ${wk.tss}</div>`;
+        } else {
+          h+=`<div class="cal-dist">${wk.dist}<span style="font-size:9px;color:var(--text2);">km</span></div>`;
+          h+=`<div class="cal-type-label">${type}</div>`;
+          if(wk.tss) h+=`<div class="cal-tss">TSS ${wk.tss}</div>`;
+        }
+        mDist+=wk.dist||0; mEle+=wk.ele||0; mTss+=wk.tss||0; mTrain++;
       } else { h+=`<div class="cal-rest">Rest</div>`; }
     }
     const MN2=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
     const dateStr=`${calY}/${calM+1}/${day}`;
-    cell.style.cursor=(race||(wk&&(wk.type!=='Rest'||wk.hrv||wk.feeling)))?'pointer':'default';
-    if(race||(wk&&(wk.type!=='Rest'||wk.hrv||wk.feeling))) {
+    const hasAnyData = wk && (wk.type!=='Rest' || wk.hrv || wk.feeling || (wk.sessions && wk.sessions.some(s=>s.type!=='Rest')));
+    cell.style.cursor=(race||hasAnyData)?'pointer':'default';
+    if(race||hasAnyData) {
       cell.onclick=()=>openDayModal(day, wk||null, race||null, dateStr);
     }
     cell.innerHTML=h; cellEl.appendChild(cell);
@@ -1229,7 +1250,7 @@ function updBadge(i) {
 function addSess(i) {
   const c=document.getElementById('ss-wrap-d'+i);
   const btn=document.getElementById('ab-d'+i);
-  c.insertBefore(makeSess(i,1),btn); btn.style.display='none'; updBadge(i);
+  c.appendChild(makeSess(i,1)); if(btn) btn.style.display='none'; updBadge(i);
 }
 function remSess(id) {
   const el=document.getElementById('ss-'+id); if(el)el.remove();
@@ -1504,7 +1525,7 @@ function saveWeek() {
 function sendToAI() {
   const w = getCurrentWeek();
   if(!w) {
-    document.getElementById('save-msg').textContent='⚠ 請先按「儲存本週」';
+    document.getElementById('save-msg').textContent='⚠ 請先按「確認並更新總覽/月曆」';
     return;
   }
   const T=w.total;
