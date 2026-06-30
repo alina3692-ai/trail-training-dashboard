@@ -1088,6 +1088,8 @@ function runFields(id, isClass, isTrail) {
       <div class="field"><label>課表描述</label><textarea id="pd-${id}" rows="3" placeholder="${isClass ? '上課內容、動作、組數...' : '貼上 TrainingPeaks 課表內容...'}"></textarea></div>
       <div class="field"><label>計畫距離 km</label><input type="number" id="pld-${id}" step="0.1" oninput="recalc()"></div>
       <div class="field"><label>計畫配速</label><input type="text" id="plp-${id}" placeholder="5:30/km" oninput="calcPaceDiff('${id}')"></div>
+      ${isTrail ? `<div class="field"><label>計畫爬升 m</label><input type="number" id="ple-${id}" step="1"></div>` : ''}
+      <div class="field"><label>計畫 TSS</label><input type="number" id="plts-${id}" step="1"></div>
     </div>`;
   const trailOnly = isTrail ? `
       <div class="field"><label>EP / EPH <span style="font-size:10px;color:var(--text3);">· 自動計算</span></label>
@@ -1107,8 +1109,8 @@ function runFields(id, isClass, isTrail) {
         <label>實際配速 <span id="pace-diff-${id}" style="font-size:11px;margin-left:6px;"></span></label>
         <input type="text" id="pa-${id}" placeholder="8:32/km" oninput="calcPaceDiff('${id}')">
       </div>
-      <div class="field"><label>爬升 m</label><input type="number" id="el-${id}" oninput="recalc();${isTrail?`calcEpEph('${id}')`:''};"></div>
-      <div class="field"><label>TSS</label><input type="number" id="ts-${id}" oninput="recalc()"></div>
+      <div class="field"><label>實際爬升 m</label><input type="number" id="el-${id}" oninput="recalc();${isTrail?`calcEpEph('${id}')`:''};"></div>
+      <div class="field"><label>實際 TSS</label><input type="number" id="ts-${id}" oninput="recalc()"></div>
       ${trailOnly}
       <div class="field"><label>RPE <span id="rv-${id}" class="rpe-num">5</span></label>
         <div class="rpe-row"><input type="range" min="1" max="10" value="5" step="1" id="rp-${id}"
@@ -1126,6 +1128,7 @@ function runFields(id, isClass, isTrail) {
       <span id="cp-${id}" style="font-size:11px;color:var(--text2);min-width:34px;text-align:right;">—</span>
     </div>
   </div>
+
   </div>`;
 }
 
@@ -1134,11 +1137,12 @@ function strFields(id) {
     <div class="plan-col">
       <div class="col-lbl">Plan 課表</div>
       <div class="field"><label>課表描述</label><textarea id="pd-${id}" rows="4" placeholder="貼上教練的肌力課表..."></textarea></div>
+      <div class="field"><label>計畫 TSS</label><input type="number" id="plts-${id}" step="1"></div>
     </div>
     <div class="exec-col">
       <div class="col-lbl">Actual 執行</div>
       <div class="field"><label>時間 min</label><input type="number" id="ti-${id}" oninput="recalc()"></div>
-      <div class="field"><label>TSS</label><input type="number" id="ts-${id}" oninput="recalc()"></div>
+      <div class="field"><label>實際 TSS</label><input type="number" id="ts-${id}" oninput="recalc()"></div>
       <div class="field"><label>RPE <span id="rv-${id}" class="rpe-num">5</span></label>
         <div class="rpe-row"><input type="range" min="1" max="10" value="5" step="1" id="rp-${id}"
           oninput="document.getElementById('rv-${id}').textContent=this.value;document.getElementById('rv-${id}').style.color=getRpeColor(+this.value);"></div>
@@ -1174,12 +1178,13 @@ function crossFields(id, type, distLabel, timeLabel) {
       <div class="col-lbl">Plan 課表</div>
       <div class="field"><label>課表描述</label><textarea id="pd-${id}" rows="3" placeholder="訓練內容、強度安排..."></textarea></div>
       <div class="field"><label>計畫${distLabel}</label><input type="number" id="pld-${id}" step="0.1" oninput="recalc()"></div>
+      <div class="field"><label>計畫 TSS</label><input type="number" id="plts-${id}" step="1"></div>
     </div>
     <div class="exec-col">
       <div class="col-lbl">Actual 執行</div>
       <div class="field"><label>實際${distLabel}</label><input type="number" id="d-${id}" step="0.01" oninput="recalc()"></div>
       <div class="field"><label>實際${timeLabel}</label><input type="text" id="ti-${id}" placeholder="1:00:00"></div>
-      <div class="field"><label>TSS</label><input type="number" id="ts-${id}" oninput="recalc()"></div>
+      <div class="field"><label>實際 TSS</label><input type="number" id="ts-${id}" oninput="recalc()"></div>
       <div class="field"><label>RPE <span id="rv-${id}" class="rpe-num">5</span></label>
         <div class="rpe-row"><input type="range" min="1" max="10" value="5" step="1" id="rp-${id}"
           oninput="document.getElementById('rv-${id}').textContent=this.value;document.getElementById('rv-${id}').style.color=getRpeColor(+this.value);"></div>
@@ -1426,6 +1431,7 @@ function collectWeekData() {
         type:tp.value, dist:gv('d-'+id), ele:gv('el-'+id), time:gs('ti-'+id),
         pace:gs('pa-'+id), tss:gv('ts-'+id), ep:gv('ep-'+id), eph:gv('eph-'+id),
         rpe:gv('rp-'+id), planDesc:gs('pd-'+id), planDist:gv('pld-'+id), planPace:gs('plp-'+id),
+        planEle:gv('ple-'+id), planTss:gv('plts-'+id),
       };
     }).filter(Boolean);
     const primary = sessions[0]||{};
@@ -1733,28 +1739,43 @@ function restoreInputFromState(w) {
     if(day.sleepHr) document.getElementById('slt-d'+i).value = day.sleepHr;
     if(day.feeling) document.getElementById('fl-d'+i).value = day.feeling;
     const primary = day.sessions && day.sessions[0];
+    const secondary = day.sessions && day.sessions[1];
     if(!primary || primary.type === 'Rest') return;
     const tp = document.getElementById('tp-d'+i+'s0');
     if(!tp) return;
     tp.value = primary.type;
     onType('d'+i+'s0');
+    // If there's a second session, add the Session B block first
+    if(secondary && secondary.type && secondary.type !== 'Rest') {
+      addSess(i);
+    }
     setTimeout(()=>{
       const S=(f,v)=>{const el=document.getElementById(f);if(el&&v!==undefined&&v!==null&&v!=='')el.value=v;};
-      S('pd-d'+i+'s0', primary.planDesc);
-      S('pld-d'+i+'s0', primary.planDist);
-      S('plp-d'+i+'s0', primary.planPace);
-      S('d-d'+i+'s0', primary.dist);
-      S('ti-d'+i+'s0', primary.time);
-      S('pa-d'+i+'s0', primary.pace);
-      S('el-d'+i+'s0', primary.ele);
-      S('ts-d'+i+'s0', primary.tss);
-      S('ep-d'+i+'s0', primary.ep);
-      S('eph-d'+i+'s0', primary.eph);
-      const rEl=document.getElementById('rp-d'+i+'s0');
-      const rV=document.getElementById('rv-d'+i+'s0');
-      if(rEl && primary.rpe){rEl.value=primary.rpe;rV.textContent=primary.rpe;rV.style.color=getRpeColor(primary.rpe);}
-      calcPaceDiff('d'+i+'s0');
-      if(primary.type==='Trail Run') calcEpEph('d'+i+'s0');
+      const fillSession = (sid, sess) => {
+        S('pd-'+sid, sess.planDesc);
+        S('pld-'+sid, sess.planDist);
+        S('plp-'+sid, sess.planPace);
+        S('ple-'+sid, sess.planEle);
+        S('plts-'+sid, sess.planTss);
+        S('d-'+sid, sess.dist);
+        S('ti-'+sid, sess.time);
+        S('pa-'+sid, sess.pace);
+        S('el-'+sid, sess.ele);
+        S('ts-'+sid, sess.tss);
+        S('ep-'+sid, sess.ep);
+        S('eph-'+sid, sess.eph);
+        const rEl=document.getElementById('rp-'+sid);
+        const rV=document.getElementById('rv-'+sid);
+        if(rEl && sess.rpe){rEl.value=sess.rpe;rV.textContent=sess.rpe;rV.style.color=getRpeColor(sess.rpe);}
+        calcPaceDiff(sid);
+        if(sess.type==='Trail Run') calcEpEph(sid);
+      };
+      fillSession('d'+i+'s0', primary);
+      if(secondary && secondary.type && secondary.type !== 'Rest') {
+        const tpB = document.getElementById('tp-d'+i+'s1');
+        if(tpB) { tpB.value = secondary.type; onType('d'+i+'s1'); }
+        setTimeout(()=>{ fillSession('d'+i+'s1', secondary); recalc(); }, 50);
+      }
       recalc();
     }, 50);
   });
