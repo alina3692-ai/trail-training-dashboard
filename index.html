@@ -1486,6 +1486,11 @@ function collectWeekData() {
   const totEle=days.reduce((s,d)=>s+(d.ele||0),0);
   const comp=document.getElementById('t-comp').textContent.replace('%','');
   const avgVam=parseInt(document.getElementById('t-vam').textContent)||0;
+  // Sum EP from all Trail Run sessions
+  const totEp = parseFloat(days.reduce((sum,d)=>{
+    if(!d.sessions) return sum;
+    return sum + d.sessions.reduce((s,sess)=>s+(sess.ep||0),0);
+  },0).toFixed(2));
   const inputDate = gs('wk-start');
   const mondayDate = getMondayOfWeek(inputDate);
   const startDate = mondayDate ? `${mondayDate.getFullYear()}-${String(mondayDate.getMonth()+1).padStart(2,'0')}-${String(mondayDate.getDate()).padStart(2,'0')}` : inputDate;
@@ -1493,7 +1498,7 @@ function collectWeekData() {
   return {
     label:gs('wk-label')||'W?', startDate, phase,
     goal:gs('wk-goal'), coachFeedback:gs('wk-coach-feedback'), aiAnalysis:gs('wk-ai-analysis'), days,
-    total:{dist:totDist,ele:totEle,tss:totTss,avgHrv:parseFloat(avgHrv),avgSleep:parseFloat(avgSleep),comp:parseFloat(comp)||0,avgVam},
+    total:{dist:totDist,ele:totEle,tss:totTss,avgHrv:parseFloat(avgHrv),avgSleep:parseFloat(avgSleep),comp:parseFloat(comp)||0,avgVam,ep:totEp},
   };
 }
 
