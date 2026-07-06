@@ -428,11 +428,11 @@
     <div class="chart-wrap"><canvas id="c-vol"></canvas></div>
   </div>
   <div class="chart-card">
-    <div class="chart-title">HRV 日趨勢</div>
+    <div class="chart-title" id="hrv-chart-title">HRV 日趨勢</div>
     <div class="chart-wrap"><canvas id="c-hrv"></canvas></div>
   </div>
   <div class="chart-card">
-    <div class="chart-title">睡眠分數 日趨勢</div>
+    <div class="chart-title" id="sleep-chart-title">睡眠分數 日趨勢</div>
     <div class="chart-sub">60分以下需注意</div>
     <div class="chart-wrap"><canvas id="c-sleep"></canvas></div>
   </div>
@@ -1626,7 +1626,10 @@ function renderCharts() {
   const tssSeries = allW.map(w=>w.total.tss||0);
   const epSeries = allW.map(w=>w.total.ep||0);
 
-  const lastW = allW[allW.length-1];
+  // For daily HRV/sleep: use most recent week that has actual day-level data
+  const lastW = allW.slice().reverse().find(w=>
+    w.days && w.days.some(d=>d.hrv>0||d.sleep>0)
+  ) || allW[allW.length-1];
   const dLabels = DAYS.map(d=>`${lastW.label} ${d.zh}`);
   const hrvD = lastW.days ? lastW.days.map(d=>d.hrv||null) : [];
   const slpD = lastW.days ? lastW.days.map(d=>d.sleep||null) : [];
@@ -1672,6 +1675,12 @@ function renderCharts() {
       options:{...chartOpts(undefined,undefined),plugins:{legend:{display:false}},responsive:true,maintainAspectRatio:false}
     });
   }
+
+  // Update HRV and sleep chart titles to show which week
+  const hrvTitle = document.getElementById('hrv-chart-title');
+  const sleepTitle = document.getElementById('sleep-chart-title');
+  if(hrvTitle) hrvTitle.textContent = `HRV 日趨勢 — ${lastW.label}`;
+  if(sleepTitle) sleepTitle.textContent = `睡眠分數 日趨勢 — ${lastW.label}`;
 
   // HRV
   destroyChart('hrv');
