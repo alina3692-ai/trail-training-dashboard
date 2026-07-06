@@ -397,6 +397,18 @@
     </div>
   </div>
 
+  <!-- AI 分析記錄 -->
+  <div class="week-box" style="margin-top:12px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+      <span style="font-size:16px;">✦</span>
+      <p class="sec-title" style="margin:0;">AI 分析記錄 · AI ANALYSIS</p>
+    </div>
+    <div class="field">
+      <label>貼上本週 AI 分析內容</label>
+      <textarea id="wk-ai-analysis" rows="6" placeholder="把 Claude 給的週訓練分析貼在這裡..."></textarea>
+    </div>
+  </div>
+
   <div class="divider"></div>
   <div class="toolbar">
     <button class="btn-ghost" onclick="exportData()">⬇ 匯出 JSON 備份</button>
@@ -675,7 +687,7 @@ function exportData() {
 
 function exportCSV() {
   if(state.weeks.length===0){alert('尚無數據可匯出。');return;}
-  const headers = ['週次','開始日期','訓練期','週目標','教練反饋','總距離km','總爬升m','總TSS','平均HRV','平均睡眠分數','完食率%','均VAM m/hr'];
+  const headers = ['週次','開始日期','訓練期','週目標','教練反饋','AI分析','總距離km','總爬升m','總TSS','平均HRV','平均睡眠分數','完食率%','均VAM m/hr'];
   const rows = state.weeks.map(w=>{
     const T = w.total||{};
     return [
@@ -684,6 +696,7 @@ function exportCSV() {
       w.phase||'',
       (w.goal||'').replace(/,/g,'，'),
       (w.coachFeedback||'').replace(/,/g,'，').replace(/\n/g,' '),
+      (w.aiAnalysis||'').replace(/,/g,'，').replace(/\n/g,' '),
       T.dist||0,
       T.ele||0,
       T.tss||0,
@@ -1479,7 +1492,7 @@ function collectWeekData() {
   const phase=document.getElementById('wk-phase').options[document.getElementById('wk-phase').selectedIndex].text;
   return {
     label:gs('wk-label')||'W?', startDate, phase,
-    goal:gs('wk-goal'), coachFeedback:gs('wk-coach-feedback'), days,
+    goal:gs('wk-goal'), coachFeedback:gs('wk-coach-feedback'), aiAnalysis:gs('wk-ai-analysis'), days,
     total:{dist:totDist,ele:totEle,tss:totTss,avgHrv:parseFloat(avgHrv),avgSleep:parseFloat(avgSleep),comp:parseFloat(comp)||0,avgVam},
   };
 }
@@ -1490,6 +1503,7 @@ function newWeek() {
   document.getElementById('wk-start').value = getThisMonday();
   document.getElementById('wk-goal').value = '';
   document.getElementById('wk-coach-feedback').value = '';
+  document.getElementById('wk-ai-analysis').value = '';
   document.getElementById('day-cards').innerHTML = '';
   buildCards();
   document.getElementById('save-msg').textContent = '';
@@ -1746,6 +1760,7 @@ function restoreInputFromState(w) {
   if(w.phase && phaseMap[w.phase]) phaseEl.value = phaseMap[w.phase];
   document.getElementById('wk-goal').value = w.goal || '';
   document.getElementById('wk-coach-feedback').value = w.coachFeedback || '';
+  document.getElementById('wk-ai-analysis').value = w.aiAnalysis || '';
 
   // Rebuild cards with date
   document.getElementById('day-cards').innerHTML = '';
