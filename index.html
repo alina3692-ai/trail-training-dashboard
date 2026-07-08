@@ -968,49 +968,65 @@ function openDayModal(day, wk, race, dateStr) {
       <div class="modal-row"><span class="modal-key">爬升</span><span class="modal-val">${race.ele} m</span></div>
       <div class="modal-row"><span class="modal-key">EP</span><span class="modal-val">${race.ep}</span></div>`;
   } else if(wk && wk.type !== 'Rest') {
-    const s = wk.sessions && wk.sessions[0];
-    const typeColor = {'Trail Run':'var(--green)','Run':'var(--blue)','Running Ability Class':'var(--purple)','Strength':'var(--amber)','Swimming':'#0E7490','Cycling':'#6B4A9E'}[wk.type]||'var(--text2)';
-    title.innerHTML = `<span style="color:${typeColor}">${wk.type}</span>`;
+    const realSessions = (wk.sessions||[]).filter(s=>s.type&&s.type!=='Rest');
+    const typeColorMap = {'Trail Run':'var(--green)','Run':'var(--blue)','Running Ability Class':'var(--purple)','Strength':'var(--amber)','Swimming':'#0E7490','Cycling':'#6B4A9E'};
+
+    // Title: show all session types
+    const typeLabel = realSessions.length>1
+      ? realSessions.map(s=>`<span style="color:${typeColorMap[s.type]||'var(--text2)'}">${s.type}</span>`).join(' <span style="color:var(--text3)">+</span> ')
+      : `<span style="color:${typeColorMap[wk.type]||'var(--text2)'}">${wk.type}</span>`;
+    title.innerHTML = typeLabel;
     dateEl.textContent = dateStr;
 
-    let rows = '';
-    if(wk.dist>0) rows+=`<div class="modal-row"><span class="modal-key">實際距離</span><span class="modal-val">${wk.dist} km</span></div>`;
-    if(s&&s.time) rows+=`<div class="modal-row"><span class="modal-key">時間</span><span class="modal-val">${s.time}</span></div>`;
-    if(s&&s.pace) rows+=`<div class="modal-row"><span class="modal-key">配速</span><span class="modal-val">${s.pace}</span></div>`;
-    if(wk.ele>0) rows+=`<div class="modal-row"><span class="modal-key">爬升</span><span class="modal-val">${wk.ele} m</span></div>`;
-    // VAM
-    if(wk.ele>0 && s&&s.time) {
-      const hrs=parseTimeToHrs(s.time);
-      if(hrs>0) rows+=`<div class="modal-row"><span class="modal-key">VAM</span><span class="modal-val">${Math.round(wk.ele/hrs)} m/hr</span></div>`;
+    let body_html = '';
+
+    // Render each session separately
+    if(realSessions.length>0) {
+      realSessions.forEach((s, idx)=>{
+        const typeColor = typeColorMap[s.type]||'var(--text2)';
+        const unit = s.type==='Swimming'?'m':'km';
+        if(realSessions.length>1) {
+          body_html += `<div style="font-size:11px;font-weight:700;color:${typeColor};margin:${idx>0?'14px':0} 0 6px;">Session ${String.fromCharCode(65+idx)} · ${s.type}</div>`;
+        }
+        let rows='';
+        if(s.dist>0) rows+=`<div class="modal-row"><span class="modal-key">實際距離</span><span class="modal-val">${s.dist} ${unit}</span></div>`;
+        if(s.time) rows+=`<div class="modal-row"><span class="modal-key">時間</span><span class="modal-val">${s.time}</span></div>`;
+        if(s.pace) rows+=`<div class="modal-row"><span class="modal-key">配速</span><span class="modal-val">${s.pace}</span></div>`;
+        if(s.ele>0) rows+=`<div class="modal-row"><span class="modal-key">爬升</span><span class="modal-val">${s.ele} m</span></div>`;
+        if(s.ele>0 && s.time) {
+          const hrs=parseTimeToHrs(s.time);
+          if(hrs>0) rows+=`<div class="modal-row"><span class="modal-key">VAM</span><span class="modal-val">${Math.round(s.ele/hrs)} m/hr</span></div>`;
+        }
+        if(s.tss>0) rows+=`<div class="modal-row"><span class="modal-key">TSS</span><span class="modal-val">${s.tss}</span></div>`;
+        if(s.ep>0) rows+=`<div class="modal-row"><span class="modal-key">EP / EPH</span><span class="modal-val">${s.ep}${s.eph?' / '+s.eph:''}</span></div>`;
+        if(s.rpe>0) rows+=`<div class="modal-row"><span class="modal-key">RPE</span><span class="modal-val">${s.rpe} / 10</span></div>`;
+
+        // Plan
+        if(s.planDesc) rows+=`<div class="modal-plan">📋 ${s.planDesc}</div>`;
+        else if(s.planDist>0) rows+=`<div class="modal-plan">📋 計畫距離 ${s.planDist}${unit}${s.planPace?' · '+s.planPace:''}</div>`;
+
+        // Completion
+        if(s.planDist>0 && s.dist>0){
+          const pct=Math.min(Math.round(s.dist/s.planDist*100),100);
+          const compColor=pct>=90?'tag-ok':pct>=60?'tag-warn':'tag-alert';
+          rows+=`<div style="margin-top:8px;"><span class="modal-tag ${compColor}">完食率 ${pct}%</span></div>`;
+        }
+        body_html += rows;
+      });
     }
-    if(wk.tss>0) rows+=`<div class="modal-row"><span class="modal-key">TSS</span><span class="modal-val">${wk.tss}</span></div>`;
-    if(s&&s.ep>0) rows+=`<div class="modal-row"><span class="modal-key">EP / EPH</span><span class="modal-val">${s.ep}${s.eph?' / '+s.eph:''}</span></div>`;
-    if(s&&s.rpe>0) rows+=`<div class="modal-row"><span class="modal-key">RPE</span><span class="modal-val">${s.rpe} / 10</span></div>`;
-    if(wk.hrv>0) rows+=`<div class="modal-row"><span class="modal-key">HRV</span><span class="modal-val">${wk.hrv}</span></div>`;
-    if(wk.sleep>0) {
-      const sc=wk.sleep;
-      const scColor=sc>=75?'var(--green)':sc>=60?'var(--amber)':'var(--red)';
-      rows+=`<div class="modal-row"><span class="modal-key">睡眠分數</span><span class="modal-val" style="color:${scColor}">${sc}</span></div>`;
+
+    // HRV / Sleep / Feeling (day-level, show once)
+    let dayRows='';
+    if(wk.hrv>0) dayRows+=`<div class="modal-row"><span class="modal-key">HRV</span><span class="modal-val">${wk.hrv}</span></div>`;
+    if(wk.sleep>0){
+      const sc=wk.sleep; const scColor=sc>=75?'var(--green)':sc>=60?'var(--amber)':'var(--red)';
+      dayRows+=`<div class="modal-row"><span class="modal-key">睡眠分數</span><span class="modal-val" style="color:${scColor}">${sc}</span></div>`;
     }
-    if(wk.sleepHr>0) rows+=`<div class="modal-row"><span class="modal-key">睡眠時間</span><span class="modal-val">${wk.sleepHr} hr</span></div>`;
+    if(wk.sleepHr>0) dayRows+=`<div class="modal-row"><span class="modal-key">睡眠時間</span><span class="modal-val">${wk.sleepHr} hr</span></div>`;
+    if(dayRows) body_html += `<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);">${dayRows}</div>`;
+    if(wk.feeling) body_html+=`<div class="modal-feeling">"${wk.feeling}"</div>`;
 
-    // Plan
-    let planHtml='';
-    if(s&&s.planDesc) planHtml=`<div class="modal-plan">📋 ${s.planDesc}</div>`;
-    else if(s&&s.planDist) planHtml=`<div class="modal-plan">📋 計畫距離 ${s.planDist}km${s.planPace?' · '+s.planPace:''}</div>`;
-
-    // Completion
-    let compHtml='';
-    if(s&&s.planDist>0&&wk.dist>0){
-      const pct=Math.min(Math.round(wk.dist/s.planDist*100),100);
-      const compColor=pct>=90?'tag-ok':pct>=60?'tag-warn':'tag-alert';
-      compHtml=`<div style="margin-top:10px;"><span class="modal-tag ${compColor}">完食率 ${pct}%</span></div>`;
-    }
-
-    // Feeling
-    const feelHtml=wk.feeling?`<div class="modal-feeling">"${wk.feeling}"</div>`:'';
-
-    body.innerHTML = rows + planHtml + compHtml + feelHtml;
+    body.innerHTML = body_html;
   } else {
     title.textContent = 'Rest Day';
     dateEl.textContent = dateStr;
