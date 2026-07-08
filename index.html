@@ -116,6 +116,8 @@
   .cal-cell { min-height: 68px; border-radius: 8px; padding: 5px 6px; border: 1px solid var(--border); background: var(--surface); cursor: default; transition: background .1s; }
   .cal-cell.empty { background: none; border-color: transparent; }
   .cal-cell.today { border-color: var(--text); border-width: 1.5px; }
+  .cal-cell.c-missed { border-color: #9E9B96; background: rgba(158,155,150,0.06); }
+  .cal-cell.c-missed .cs-type { color: var(--text3); text-decoration: line-through; }
   .cal-cell.c-target { border-color: var(--orange); background: var(--orange-bg); }
   .cal-cell.c-tune { border-color: var(--blue); background: var(--blue-bg); }
   .cal-cell.c-trail { border-color: var(--green); background: var(--green-bg); }
@@ -1060,6 +1062,7 @@ function renderCal() {
   for(let day=1;day<=dim;day++){
     const cell=document.createElement('div'); cell.className='cal-cell';
     const isToday=today.getFullYear()===calY&&today.getMonth()===calM&&today.getDate()===day;
+    const isPast = new Date(calY,calM,day) < new Date(today.getFullYear(),today.getMonth(),today.getDate());
     if(isToday) cell.classList.add('today');
     const race=rMap[day]; const wk=wMap[day];
     let h=`<div class="cal-dn-num">${day}</div>`;
@@ -1069,33 +1072,42 @@ function renderCal() {
       if(race.km) h+=`<div style="font-size:9px;color:var(--text2);">${race.km}km·${race.ele}m↑</div>`;
     } else if(wk) {
       const type=wk.type||'Rest';
-      // Gather all real sessions (not Rest) for this day
       const realSessions = (wk.sessions||[]).filter(s=>s.type && s.type!=='Rest');
+      // Check if any session has actual execution data
+      const hasActual = realSessions.some(s=>s.dist>0||s.ele>0||s.tss>0||s.time);
+      const hasPlanned = realSessions.some(s=>s.planDist>0||s.planEle>0||s.planTss>0);
       const hasTraining = type!=='Rest' && (wk.dist>0||wk.ele>0||wk.tss>0) || realSessions.length>0;
       if(hasTraining){
         const clsMap={'Trail Run':'c-trail','Run':'c-run','Running Ability Class':'c-class','Strength':'c-strength','Swimming':'c-swim','Cycling':'c-cycle'};
-        // Use first real session's type for the cell border color
         const primaryType = realSessions[0] ? realSessions[0].type : type;
         const cls=clsMap[primaryType]||'';
-        if(cls) cell.classList.add(cls);
+        // If past date with planned but no actual data → show as missed (grey)
+        if(isPast && !hasActual && hasPlanned) {
+          cell.classList.add('c-missed');
+        } else if(cls) {
+          cell.classList.add(cls);
+        }
         if(realSessions.length>0) {
-          // Show each session individually
           realSessions.forEach(s=>{
+            // Fix unit: Swimming uses m, others use km
+            const unit = s.type==='Swimming' ? 'm' : 'km';
             const stat = s.type==='Strength'
               ? (s.time?`${s.time}min`:'')
-              : [s.dist>0?`${s.dist}km`:'', s.ele>0?`${s.ele}m↑`:''].filter(Boolean).join(' · ');
-            h+=`<div class="cal-sess-item"><span class="cs-type">${s.type}</span>${stat?' · <span class="cs-stat">'+stat+'</span>':''}</div>`;
+              : [s.dist>0?`${s.dist}${unit}`:'', s.ele>0?`${s.ele}m↑`:''].filter(Boolean).join(' · ');
+            // Show missed indicator if past and no actual data
+            const missed = isPast && !hasActual ? ' 🚫' : '';
+            h+=`<div class="cal-sess-item"><span class="cs-type">${s.type}${missed}</span>${stat?' · <span class="cs-stat">'+stat+'</span>':''}</div>`;
           });
           if(wk.tss>0) h+=`<div class="cal-tss">TSS ${wk.tss}</div>`;
         } else {
-          h+=`<div class="cal-dist">${wk.dist}<span style="font-size:9px;color:var(--text2);">km</span></div>`;
+          const unit = type==='Swimming'?'m':'km';
+          h+=`<div class="cal-dist">${wk.dist}<span style="font-size:9px;color:var(--text2);">${unit}</span></div>`;
           h+=`<div class="cal-type-label">${type}</div>`;
           if(wk.tss) h+=`<div class="cal-tss">TSS ${wk.tss}</div>`;
         }
         mDist+=wk.dist||0; mEle+=wk.ele||0; mTss+=wk.tss||0; mTrain++;
       } else { h+=`<div class="cal-rest">Rest</div>`; }
     }
-    const MN2=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
     const dateStr=`${calY}/${calM+1}/${day}`;
     const hasAnyData = wk && (wk.type!=='Rest' || wk.hrv || wk.feeling || (wk.sessions && wk.sessions.some(s=>s.type!=='Rest')));
     cell.style.cursor=(race||hasAnyData)?'pointer':'default';
