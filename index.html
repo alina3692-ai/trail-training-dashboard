@@ -1090,8 +1090,8 @@ function renderCal() {
       const type=wk.type||'Rest';
       const realSessions = (wk.sessions||[]).filter(s=>s.type && s.type!=='Rest');
       // Check if any session has actual execution data
-      const hasActual = realSessions.some(s=>s.dist>0||s.ele>0||s.tss>0||s.time);
-      const hasPlanned = realSessions.some(s=>s.planDist>0||s.planEle>0||s.planTss>0);
+      const hasActual = realSessions.some(s=>s.dist>0||s.ele>0||s.tss>0||(s.time&&s.time.trim()&&s.time!=='0:00:00'&&s.time!=='0')||(s.pace&&s.pace.trim()));
+      const hasPlanned = realSessions.some(s=>s.planDist>0||s.planEle>0||s.planTss>0||(s.planDesc&&s.planDesc.trim())||(s.planPace&&s.planPace.trim()));
       const hasTraining = type!=='Rest' && (wk.dist>0||wk.ele>0||wk.tss>0) || realSessions.length>0;
       if(hasTraining){
         const clsMap={'Trail Run':'c-trail','Run':'c-run','Running Ability Class':'c-class','Strength':'c-strength','Swimming':'c-swim','Cycling':'c-cycle'};
