@@ -1097,22 +1097,36 @@ function renderCal() {
         const clsMap={'Trail Run':'c-trail','Run':'c-run','Running Ability Class':'c-class','Strength':'c-strength','Swimming':'c-swim','Cycling':'c-cycle'};
         const primaryType = realSessions[0] ? realSessions[0].type : type;
         const cls=clsMap[primaryType]||'';
-        // If past date with planned but no actual data → show as missed (grey)
-        if(isPast && !hasActual && hasPlanned) {
+        // Cell turns grey only if ALL sessions are missed
+        const allMissed = isPast && realSessions.every(s=>{
+          const sessActual = s.dist>0||s.ele>0||s.tss>0||
+            (s.time&&s.time.trim()&&s.time!=='0:00:00'&&s.time!=='0')||
+            (s.pace&&s.pace.trim());
+          const sessPlanned = s.planDist>0||s.planEle>0||s.planTss>0||
+            (s.planDesc&&s.planDesc.trim())||(s.planPace&&s.planPace.trim());
+          return !sessActual && sessPlanned;
+        }) && realSessions.length>0;
+        if(allMissed) {
           cell.classList.add('c-missed');
         } else if(cls) {
           cell.classList.add(cls);
         }
         if(realSessions.length>0) {
           realSessions.forEach(s=>{
-            // Fix unit: Swimming uses m, others use km
             const unit = s.type==='Swimming' ? 'm' : 'km';
             const stat = s.type==='Strength'
               ? (s.time?`${s.time}min`:'')
               : [s.dist>0?`${s.dist}${unit}`:'', s.ele>0?`${s.ele}m↑`:''].filter(Boolean).join(' · ');
-            // Show missed indicator if past and no actual data
-            const missed = isPast && !hasActual ? ' 🚫' : '';
-            h+=`<div class="cal-sess-item"><span class="cs-type">${s.type}${missed}</span>${stat?' · <span class="cs-stat">'+stat+'</span>':''}</div>`;
+            // Check per-session whether it was executed
+            const sessActual = s.dist>0||s.ele>0||s.tss>0||
+              (s.time&&s.time.trim()&&s.time!=='0:00:00'&&s.time!=='0')||
+              (s.pace&&s.pace.trim());
+            const sessPlanned = s.planDist>0||s.planEle>0||s.planTss>0||
+              (s.planDesc&&s.planDesc.trim())||(s.planPace&&s.planPace.trim());
+            const sessMissed = isPast && !sessActual && sessPlanned;
+            const typeStyle = sessMissed ? 'text-decoration:line-through;color:var(--text3);' : '';
+            const missedIcon = sessMissed ? ' 🚫' : '';
+            h+=`<div class="cal-sess-item" style="${sessMissed?'opacity:0.6;':''}"><span class="cs-type" style="${typeStyle}">${s.type}${missedIcon}</span>${stat&&!sessMissed?' · <span class="cs-stat">'+stat+'</span>':''}</div>`;
           });
           if(wk.tss>0) h+=`<div class="cal-tss">TSS ${wk.tss}</div>`;
         } else {
