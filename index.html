@@ -1459,7 +1459,9 @@ function recalc() {
       const t=tp.value; if(t==='Rest')return;
       tt+=gv('ts-'+id);
       if(t==='Strength'){strN++;return;}
-      const dist=gv('d-'+id); td+=dist;
+      const dist=gv('d-'+id);
+      // Swimming distance is in metres, convert to km for totals
+      td += t==='Swimming' ? dist/1000 : dist;
       const ele=gv('el-'+id); te+=ele;
       // VAM auto-calc (Trail Run only)
       const timeStr=gs('ti-'+id);
@@ -1511,8 +1513,12 @@ function collectWeekData() {
       };
     }).filter(Boolean);
     const primary = sessions[0]||{};
+    const primaryType = primary.type||'Rest';
+    const primaryDist = primaryType==='Swimming' ? (primary.dist||0)/1000
+      : primaryType==='Strength' ? 0
+      : (primary.dist||0);
     return {
-      day:DAYS[i].zh, type:primary.type||'Rest', dist:primary.dist||0,
+      day:DAYS[i].zh, type:primaryType, dist:primaryDist,
       ele:primary.ele||0, tss:sessions.reduce((s,x)=>s+(x.tss||0),0),
       hrv:gv('hrv-d'+i), sleep:gv('sl-d'+i), sleepHr:gv('slt-d'+i),
       feeling:gs('fl-d'+i), sessions,
@@ -1524,7 +1530,13 @@ function collectWeekData() {
   const avgHrv=hrvVals.length?(hrvVals.reduce((s,d)=>s+d.hrv,0)/hrvVals.length).toFixed(0):0;
   const avgSleep=slpVals.length?(slpVals.reduce((s,d)=>s+d.sleep,0)/slpVals.length).toFixed(0):0;
   // Compute totals directly from days (don't rely on DOM display values)
-  const totDist=parseFloat(days.reduce((s,d)=>s+(d.dist||0),0).toFixed(2));
+  const totDist=parseFloat(days.reduce((s,d)=>{
+    if(!d.sessions) return s+(d.dist||0);
+    return s+d.sessions.reduce((ss,sess)=>{
+      if(!sess.dist) return ss;
+      return ss + (sess.type==='Swimming' ? sess.dist/1000 : sess.dist);
+    },0);
+  },0).toFixed(2));
   const totEle=days.reduce((s,d)=>s+(d.ele||0),0);
   const comp=document.getElementById('t-comp').textContent.replace('%','');
   const avgVam=parseInt(document.getElementById('t-vam').textContent)||0;
