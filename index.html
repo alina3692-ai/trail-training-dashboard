@@ -281,6 +281,7 @@
   <button class="tab" onclick="sw('input',this)">輸入</button>
   <button class="tab" onclick="sw('trends',this)">趨勢</button>
   <button class="tab" onclick="sw('races',this)">賽事</button>
+  <button class="tab" onclick="sw('nutrition',this)">補給</button>
   <button class="tab" onclick="sw('guide',this)">說明</button>
 </div>
 
@@ -553,6 +554,161 @@
         <div style="font-size:13px;color:var(--text2);line-height:1.7;">每小時耗力速度，反映跑動效率。數字越高代表單位時間內完成的難度越高，是追蹤越野跑進步的核心指標。</div>
       </div>
     </div>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     NUTRITION
+══════════════════════════════════════════════ -->
+<div id="tab-nutrition" class="section">
+
+  <!-- 訓練前計畫 -->
+  <div class="week-box">
+    <p class="sec-title" style="margin-bottom:12px;">📋 訓練前補給計畫</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div class="field"><label>日期</label><input type="date" id="n-date"></div>
+      <div class="field"><label>訓練類型</label>
+        <select id="n-type">
+          <option>長距離 Trail Run</option>
+          <option>長距離 Run</option>
+          <option>比賽</option>
+          <option>其他</option>
+        </select>
+      </div>
+    </div>
+    <div class="field"><label>訓練內容描述</label><textarea id="n-desc" rows="2" placeholder="例：七星山三進三出，預估3.5小時"></textarea></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+      <div class="field"><label>計畫距離 km</label><input type="number" id="n-plan-dist" step="0.1" oninput="nCalcPlan()"></div>
+      <div class="field"><label>計畫爬升 m</label><input type="number" id="n-plan-ele" oninput="nCalcPlan()"></div>
+      <div class="field"><label>預估 EPH</label><input type="number" id="n-plan-eph" step="0.1" placeholder="例：8.5" oninput="nCalcPlan()"></div>
+    </div>
+    <div id="n-plan-stats" style="display:none;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+        <div class="tc"><div class="tc-val" id="n-ep">—</div><div class="tc-lbl">EP</div></div>
+        <div class="tc"><div class="tc-val" id="n-eph-calc">—</div><div class="tc-lbl">EPH</div></div>
+        <div class="tc"><div class="tc-val" id="n-est-time">—</div><div class="tc-lbl">預估時間</div></div>
+        <div class="tc"><div class="tc-val" id="n-supps">—</div><div class="tc-lbl">補給次數</div></div>
+        <div class="tc"><div class="tc-val" id="n-water-plan">—</div><div class="tc-lbl">建議水量</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 訓練後記錄 -->
+  <div class="week-box" style="margin-top:12px;">
+    <p class="sec-title" style="margin-bottom:12px;">✅ 訓練後實際記錄</p>
+
+    <div style="font-size:11px;color:var(--text2);margin-bottom:8px;font-weight:600;">基本數據</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;">
+      <div class="field"><label>實際距離 km</label><input type="number" id="n-act-dist" step="0.01" oninput="nCalcActual()"></div>
+      <div class="field"><label>實際爬升 m</label><input type="number" id="n-act-ele" oninput="nCalcActual()"></div>
+      <div class="field"><label>實際時間</label><input type="text" id="n-act-time" placeholder="3:30:00" oninput="nCalcActual()"></div>
+      <div class="field"><label>TSS</label><input type="number" id="n-act-tss"></div>
+    </div>
+    <div id="n-act-stats" style="display:none;margin-bottom:10px;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <div class="tc"><div class="tc-val" id="n-act-ep">—</div><div class="tc-lbl">實際 EP</div></div>
+        <div class="tc"><div class="tc-val" id="n-act-eph">—</div><div class="tc-lbl">實際 EPH</div></div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div style="font-size:11px;color:var(--text2);margin-bottom:8px;font-weight:600;">💧 水分</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div class="field"><label>軟水壺（500ml/管）幾管</label><input type="number" id="n-water-btl" step="0.5" min="0" oninput="nCalcNutrition()"></div>
+      <div class="tc" style="align-self:end;margin-bottom:10px;"><div class="tc-val" id="n-water-total">—</div><div class="tc-lbl">總水量 ml</div></div>
+    </div>
+
+    <div class="divider"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <div style="font-size:11px;color:var(--text2);font-weight:600;">🍯 果膠</div>
+      <button class="btn-ghost" onclick="nAddGel()" style="font-size:11px;padding:4px 10px;">+ 新增</button>
+    </div>
+    <div id="n-gel-list"><div style="font-size:12px;color:var(--text3);padding:4px 0;">尚未新增果膠</div></div>
+
+    <div class="divider"></div>
+    <div style="font-size:11px;color:var(--text2);margin-bottom:8px;font-weight:600;">⚡ 電解質</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div class="field">
+        <label>Race On 水動能（包）</label>
+        <input type="number" id="n-raceon" min="0" oninput="nCalcNutrition()">
+        <div style="margin-top:4px;font-size:10px;color:var(--amber);">鈉 442mg／包 · 25kcal／包</div>
+      </div>
+      <div class="field">
+        <label>SaltStick（顆）</label>
+        <input type="number" id="n-saltstick" min="0" oninput="nCalcNutrition()">
+        <div style="margin-top:4px;font-size:10px;color:var(--amber);">鈉 215mg／顆 · 鎂 11mg／顆</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div style="font-size:11px;color:var(--text2);margin-bottom:8px;font-weight:600;">🧴 其他補充品</div>
+    <textarea id="n-other" rows="2" placeholder="例：咖啡因錠 2顆、維生素C 1包..."></textarea>
+
+    <div class="divider"></div>
+    <div style="font-size:11px;color:var(--text2);margin-bottom:8px;font-weight:600;">💬 跑後感受</div>
+    <div class="field">
+      <label>整體補給感覺</label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;" id="n-feeling-btns">
+        <button class="btn-ghost" onclick="nSelect(this,'feeling','充足')" style="font-size:11px;">充足</button>
+        <button class="btn-ghost" onclick="nSelect(this,'feeling','剛好')" style="font-size:11px;">剛好</button>
+        <button class="btn-ghost" onclick="nSelect(this,'feeling','不足')" style="font-size:11px;">不足</button>
+        <button class="btn-ghost" onclick="nSelect(this,'feeling','太多')" style="font-size:11px;">太多</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>腸胃狀況</label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;" id="n-gut-btns">
+        <button class="btn-ghost" onclick="nSelect(this,'gut','正常')" style="font-size:11px;">正常</button>
+        <button class="btn-ghost" onclick="nSelect(this,'gut','稍微脹氣')" style="font-size:11px;">稍微脹氣</button>
+        <button class="btn-ghost" onclick="nSelect(this,'gut','噁心')" style="font-size:11px;">噁心</button>
+        <button class="btn-ghost" onclick="nSelect(this,'gut','反胃想吐')" style="font-size:11px;">反胃想吐</button>
+        <button class="btn-ghost" onclick="nSelect(this,'gut','不想吃東西')" style="font-size:11px;">不想吃東西</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>有無抽筋</label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;" id="n-cramp-btns">
+        <button class="btn-ghost" onclick="nSelect(this,'cramp','無')" style="font-size:11px;">無</button>
+        <button class="btn-ghost" onclick="nSelect(this,'cramp','輕微')" style="font-size:11px;">輕微</button>
+        <button class="btn-ghost" onclick="nSelect(this,'cramp','嚴重')" style="font-size:11px;">嚴重</button>
+      </div>
+    </div>
+    <div class="field"><label>其他感受</label><textarea id="n-feeling-text" rows="3" placeholder="例：後段開始不想吃膠，口味偏甜會膩..."></textarea></div>
+  </div>
+
+  <!-- 彙整 -->
+  <div class="totals-box" style="margin-top:12px;">
+    <p class="sec-title" style="margin-bottom:10px;">📊 補給彙整</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+      <div class="tc"><div class="tc-val" id="n-sum-kcal">—</div><div class="tc-lbl">總熱量 kcal</div></div>
+      <div class="tc"><div class="tc-val" id="n-sum-sodium">—</div><div class="tc-lbl">總鈉 mg</div></div>
+      <div class="tc"><div class="tc-val" id="n-sum-water">—</div><div class="tc-lbl">總水量 ml</div></div>
+      <div class="tc"><div class="tc-val" id="n-sum-kcal-hr">—</div><div class="tc-lbl">kcal/hr</div></div>
+      <div class="tc"><div class="tc-val" id="n-sum-sodium-hr">—</div><div class="tc-lbl">鈉 mg/hr</div></div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn-primary" onclick="nGenerateSummary()">📋 彙整並複製給 Claude</button>
+      <button class="btn-ghost" onclick="nSaveRecord()">💾 儲存記錄</button>
+      <button class="btn-ghost" onclick="nClearForm()">🗑 清空</button>
+    </div>
+    <div class="save-msg" id="n-save-msg"></div>
+  </div>
+
+  <!-- AI 建議 -->
+  <div class="week-box" style="margin-top:12px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+      <span style="font-size:16px;">✦</span>
+      <p class="sec-title" style="margin:0;">AI 建議回填</p>
+    </div>
+    <textarea id="n-ai-advice" rows="5" placeholder="把 Claude 給的補給分析和建議貼在這裡..."></textarea>
+    <button class="btn-ghost" style="margin-top:8px;" onclick="nSaveAiAdvice()">儲存 AI 建議</button>
+  </div>
+
+  <!-- 歷史記錄 -->
+  <div class="week-box" style="margin-top:12px;">
+    <p class="sec-title" style="margin-bottom:12px;">📚 歷史補給記錄</p>
+    <div id="n-history-list"><div style="font-size:12px;color:var(--text3);">尚無記錄</div></div>
   </div>
 
 </div>
@@ -1912,6 +2068,310 @@ if(state.weeks.length > 0) {
 }
 renderCal();
 updateOverview();
+
+// ══════════════════════════════════════════════
+// NUTRITION MODULE
+// ══════════════════════════════════════════════
+const N_RACEON = { sodium: 442, kcal: 25 };
+const N_SALTSTICK = { sodium: 215, magnesium: 11, kcal: 0 };
+let nGels = [], nGelId = 0;
+let nFeeling = '', nGut = '', nCramp = '';
+
+function nParseHrs(str) {
+  if(!str) return 0;
+  const p = str.split(':');
+  if(p.length===3) return +p[0]+ +p[1]/60+ +p[2]/3600;
+  if(p.length===2) return +p[0]+ +p[1]/60;
+  return parseFloat(str)||0;
+}
+
+function nCalcPlan() {
+  const dist = parseFloat(document.getElementById('n-plan-dist').value)||0;
+  const ele = parseFloat(document.getElementById('n-plan-ele').value)||0;
+  const eph = parseFloat(document.getElementById('n-plan-eph').value)||0;
+  if(!dist && !ele) { document.getElementById('n-plan-stats').style.display='none'; return; }
+  const ep = parseFloat((dist+ele/100).toFixed(2));
+  const estHrs = eph>0 ? ep/eph : 0;
+  const estStr = estHrs>0 ? `${Math.floor(estHrs)}:${String(Math.round((estHrs%1)*60)).padStart(2,'0')}` : '—';
+  const supps = estHrs>0 ? Math.floor(estHrs*60/40) : 0;
+  const water = estHrs>0 ? Math.round(estHrs*400) : 0;
+  document.getElementById('n-ep').textContent = ep;
+  document.getElementById('n-eph-calc').textContent = eph||'—';
+  document.getElementById('n-est-time').textContent = estStr;
+  document.getElementById('n-supps').textContent = supps||'—';
+  document.getElementById('n-water-plan').textContent = water?water+'ml':'—';
+  document.getElementById('n-plan-stats').style.display = 'block';
+}
+
+function nCalcActual() {
+  const dist = parseFloat(document.getElementById('n-act-dist').value)||0;
+  const ele = parseFloat(document.getElementById('n-act-ele').value)||0;
+  const hrs = nParseHrs(document.getElementById('n-act-time').value);
+  if(!dist && !ele) { document.getElementById('n-act-stats').style.display='none'; return; }
+  const ep = parseFloat((dist+ele/100).toFixed(2));
+  const eph = hrs>0 ? parseFloat((ep/hrs).toFixed(2)) : 0;
+  document.getElementById('n-act-ep').textContent = ep;
+  document.getElementById('n-act-eph').textContent = eph||'—';
+  document.getElementById('n-act-stats').style.display = 'block';
+  nCalcNutrition();
+}
+
+function nCalcNutrition() {
+  const waterMl = (parseFloat(document.getElementById('n-water-btl').value)||0)*500;
+  document.getElementById('n-water-total').textContent = waterMl?waterMl+'ml':'—';
+  const raceOn = parseFloat(document.getElementById('n-raceon').value)||0;
+  const salt = parseFloat(document.getElementById('n-saltstick').value)||0;
+  const gelKcal = nGels.reduce((s,g)=>s+g.kcal*g.count,0);
+  const totalKcal = gelKcal + raceOn*N_RACEON.kcal;
+  const totalSodium = raceOn*N_RACEON.sodium + salt*N_SALTSTICK.sodium;
+  const hrs = nParseHrs(document.getElementById('n-act-time').value);
+  document.getElementById('n-sum-kcal').textContent = totalKcal||'—';
+  document.getElementById('n-sum-sodium').textContent = totalSodium||'—';
+  document.getElementById('n-sum-water').textContent = waterMl?waterMl+'ml':'—';
+  document.getElementById('n-sum-kcal-hr').textContent = (hrs>0&&totalKcal)?Math.round(totalKcal/hrs):'—';
+  document.getElementById('n-sum-sodium-hr').textContent = (hrs>0&&totalSodium)?Math.round(totalSodium/hrs):'—';
+}
+
+function nAddGel() {
+  const id = nGelId++;
+  nGels.push({id, brand:'', flavor:'', count:1, kcal:100, taste:0, gut:'正常'});
+  nRenderGels();
+}
+function nRemoveGel(id) { nGels=nGels.filter(g=>g.id!==id); nRenderGels(); nCalcNutrition(); }
+function nUpdateGel(id, key, val) { const g=nGels.find(g=>g.id===id); if(g) g[key]=val; }
+function nSetTaste(id, val) { nUpdateGel(id,'taste',val); nRenderGels(); }
+function nRenderGels() {
+  const el = document.getElementById('n-gel-list');
+  if(nGels.length===0) { el.innerHTML='<div style="font-size:12px;color:var(--text3);padding:4px 0;">尚未新增果膠</div>'; return; }
+  el.innerHTML = nGels.map(g=>`
+    <div style="background:var(--surface2);border-radius:var(--radius);padding:10px;margin-bottom:8px;position:relative;">
+      <button onclick="nRemoveGel(${g.id})" style="position:absolute;top:8px;right:8px;background:none;border:1px solid #FCA5A5;border-radius:4px;padding:2px 8px;font-size:11px;color:var(--red);cursor:pointer;">移除</button>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px;">
+        <div class="field"><label>品牌</label><input type="text" value="${g.brand}" placeholder="例：Maurten" oninput="nUpdateGel(${g.id},'brand',this.value)"></div>
+        <div class="field"><label>口味</label><input type="text" value="${g.flavor}" placeholder="例：草莓" oninput="nUpdateGel(${g.id},'flavor',this.value)"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
+        <div class="field"><label>幾包</label><input type="number" value="${g.count}" min="1" oninput="nUpdateGel(${g.id},'count',+this.value);nCalcNutrition()"></div>
+        <div class="field"><label>熱量/包 kcal</label><input type="number" value="${g.kcal}" oninput="nUpdateGel(${g.id},'kcal',+this.value);nCalcNutrition()"></div>
+        <div class="field"><label>適口性</label><div style="display:flex;gap:2px;">${[1,2,3,4,5].map(i=>`<span style="font-size:18px;cursor:pointer;color:${i<=g.taste?'#F59E0B':'var(--border2)'}" onclick="nSetTaste(${g.id},${i})">★</span>`).join('')}</div></div>
+      </div>
+      <div class="field"><label>腸胃感受</label>
+        <div style="display:flex;gap:6px;">
+          ${['正常','稍微不適','噁心'].map(s=>`<button class="btn-ghost" style="font-size:11px;${g.gut===s?'background:var(--text);color:white;border-color:var(--text);':''}" onclick="nUpdateGel(${g.id},'gut','${s}');nRenderGels()">${s}</button>`).join('')}
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function nSelect(btn, type, val) {
+  const map = {feeling:'n-feeling-btns', gut:'n-gut-btns', cramp:'n-cramp-btns'};
+  document.getElementById(map[type]).querySelectorAll('button').forEach(b=>{
+    b.style.background=''; b.style.color='var(--text2)'; b.style.borderColor='var(--border2)';
+  });
+  btn.style.background='var(--text)'; btn.style.color='white'; btn.style.borderColor='var(--text)';
+  if(type==='feeling') nFeeling=val;
+  else if(type==='gut') nGut=val;
+  else nCramp=val;
+}
+
+function nGenerateSummary() {
+  const date = document.getElementById('n-date').value;
+  const desc = document.getElementById('n-desc').value;
+  const planDist = document.getElementById('n-plan-dist').value;
+  const planEle = document.getElementById('n-plan-ele').value;
+  const planEph = document.getElementById('n-plan-eph').value;
+  const actDist = document.getElementById('n-act-dist').value;
+  const actEle = document.getElementById('n-act-ele').value;
+  const actTime = document.getElementById('n-act-time').value;
+  const actTss = document.getElementById('n-act-tss').value;
+  const waterBtl = document.getElementById('n-water-btl').value;
+  const raceOn = parseFloat(document.getElementById('n-raceon').value)||0;
+  const salt = parseFloat(document.getElementById('n-saltstick').value)||0;
+  const other = document.getElementById('n-other').value;
+  const feelText = document.getElementById('n-feeling-text').value;
+  const hrs = nParseHrs(actTime);
+  const dist = parseFloat(actDist)||0;
+  const ele = parseFloat(actEle)||0;
+  const ep = dist||ele ? (dist+ele/100).toFixed(2) : '—';
+  const eph = hrs>0&&ep!=='—' ? (parseFloat(ep)/hrs).toFixed(2) : '—';
+  const totalKcal = nGels.reduce((s,g)=>s+g.kcal*g.count,0) + raceOn*N_RACEON.kcal;
+  const totalSodium = raceOn*N_RACEON.sodium + salt*N_SALTSTICK.sodium;
+  const waterMl = (parseFloat(waterBtl)||0)*500;
+  const gelSummary = nGels.length>0
+    ? nGels.map(g=>`  - ${g.brand} ${g.flavor}：${g.count}包 × ${g.kcal}kcal，適口性${'★'.repeat(g.taste)||'未填'}，腸胃${g.gut}`).join('\n')
+    : '  無';
+  const text = `【補給記錄】${date} ${desc}
+
+▌訓練數據
+計畫：${planDist||'—'}km、${planEle||'—'}m↑、預估 EPH ${planEph||'—'}
+實際：${actDist||'—'}km、${actEle||'—'}m↑、${actTime||'—'}、TSS ${actTss||'—'}
+EP：${ep}、EPH：${eph}
+
+▌補給內容
+水分：軟水壺 ${waterBtl||0} 管（${waterMl}ml）
+果膠：
+${gelSummary}
+Race On 水動能：${raceOn} 包（鈉 ${raceOn*N_RACEON.sodium}mg）
+SaltStick：${salt} 顆（鈉 ${salt*N_SALTSTICK.sodium}mg）
+其他：${other||'無'}
+
+▌彙整
+總熱量：${totalKcal}kcal（${hrs>0?Math.round(totalKcal/hrs)+'kcal/hr':'—'}）
+總鈉：${totalSodium}mg（${hrs>0?Math.round(totalSodium/hrs)+'mg/hr':'—'}）
+總水量：${waterMl}ml
+
+▌跑後感受
+補給感覺：${nFeeling||'未填'}
+腸胃狀況：${nGut||'未填'}
+抽筋：${nCramp||'未填'}
+其他：${feelText||'無'}
+
+請幫我分析這次補給策略是否足夠，並給下次的調整建議。`;
+  navigator.clipboard.writeText(text).then(()=>{
+    const msg = document.getElementById('n-save-msg');
+    msg.textContent = '✓ 已複製！直接貼給 Claude 分析';
+    msg.style.color = 'var(--green)';
+    setTimeout(()=>{ msg.textContent=''; }, 3000);
+  });
+}
+
+function nSaveRecord() {
+  const date = document.getElementById('n-date').value;
+  if(!date) { alert('請先填入日期'); return; }
+  const records = JSON.parse(localStorage.getItem('nutrition_records')||'[]');
+  const hrs = nParseHrs(document.getElementById('n-act-time').value);
+  const dist = parseFloat(document.getElementById('n-act-dist').value)||0;
+  const ele = parseFloat(document.getElementById('n-act-ele').value)||0;
+  const ep = dist||ele ? parseFloat((dist+ele/100).toFixed(2)) : 0;
+  const eph = hrs>0&&ep ? parseFloat((ep/hrs).toFixed(2)) : 0;
+  const raceOn = parseFloat(document.getElementById('n-raceon').value)||0;
+  const salt = parseFloat(document.getElementById('n-saltstick').value)||0;
+  const totalKcal = nGels.reduce((s,g)=>s+g.kcal*g.count,0) + raceOn*N_RACEON.kcal;
+  const totalSodium = raceOn*N_RACEON.sodium + salt*N_SALTSTICK.sodium;
+  const waterMl = (parseFloat(document.getElementById('n-water-btl').value)||0)*500;
+  const record = {
+    id:Date.now(), date,
+    desc:document.getElementById('n-desc').value,
+    planDist:document.getElementById('n-plan-dist').value,
+    planEle:document.getElementById('n-plan-ele').value,
+    planEph:document.getElementById('n-plan-eph').value,
+    actDist:dist, actEle:ele,
+    actTime:document.getElementById('n-act-time').value,
+    actTss:document.getElementById('n-act-tss').value,
+    ep, eph, hrs, waterMl, raceOn, salt,
+    otherSupps:document.getElementById('n-other').value,
+    gels:JSON.parse(JSON.stringify(nGels)),
+    totalKcal, totalSodium,
+    feeling:nFeeling, gut:nGut, cramp:nCramp,
+    feelingText:document.getElementById('n-feeling-text').value,
+    aiAdvice:document.getElementById('n-ai-advice').value,
+  };
+  const existing = records.findIndex(r=>r.date===date);
+  if(existing>=0) {
+    if(!confirm(`${date} 已有記錄，要覆蓋嗎？`)) return;
+    records[existing]=record;
+  } else { records.unshift(record); }
+  localStorage.setItem('nutrition_records', JSON.stringify(records));
+  nRenderHistory();
+  const msg = document.getElementById('n-save-msg');
+  msg.textContent = `✓ ${date} 補給記錄已儲存！`;
+  msg.style.color = 'var(--green)';
+  setTimeout(()=>{ msg.textContent=''; }, 3000);
+}
+
+function nSaveAiAdvice() {
+  const date = document.getElementById('n-date').value;
+  if(!date) { alert('請先填入日期並儲存記錄'); return; }
+  const records = JSON.parse(localStorage.getItem('nutrition_records')||'[]');
+  const idx = records.findIndex(r=>r.date===date);
+  if(idx<0) { alert('請先按「儲存記錄」'); return; }
+  records[idx].aiAdvice = document.getElementById('n-ai-advice').value;
+  localStorage.setItem('nutrition_records', JSON.stringify(records));
+  const msg = document.getElementById('n-save-msg');
+  msg.textContent = '✓ AI 建議已儲存！'; msg.style.color='var(--green)';
+  setTimeout(()=>{ msg.textContent=''; },2000);
+}
+
+function nClearForm() {
+  if(!confirm('確定要清空所有欄位嗎？')) return;
+  ['n-date','n-desc','n-plan-dist','n-plan-ele','n-plan-eph',
+   'n-act-dist','n-act-ele','n-act-time','n-act-tss',
+   'n-water-btl','n-raceon','n-saltstick','n-other','n-feeling-text','n-ai-advice']
+    .forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  nGels=[]; nGelId=0; nFeeling=''; nGut=''; nCramp='';
+  ['n-feeling-btns','n-gut-btns','n-cramp-btns'].forEach(id=>{
+    document.getElementById(id).querySelectorAll('button').forEach(b=>{
+      b.style.background=''; b.style.color='var(--text2)'; b.style.borderColor='var(--border2)';
+    });
+  });
+  document.getElementById('n-plan-stats').style.display='none';
+  document.getElementById('n-act-stats').style.display='none';
+  nRenderGels(); nCalcNutrition();
+}
+
+function nRenderHistory() {
+  const records = JSON.parse(localStorage.getItem('nutrition_records')||'[]');
+  const el = document.getElementById('n-history-list');
+  if(records.length===0) { el.innerHTML='<div style="font-size:12px;color:var(--text3);">尚無記錄</div>'; return; }
+  el.innerHTML = records.map(r=>`
+    <div style="border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+        <div>
+          <div style="font-weight:700;font-size:13px;">${r.date} <span style="color:var(--text2);font-weight:400;">${r.desc||''}</span></div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px;">${r.actDist||'—'}km · ${r.actEle||'—'}m↑ · ${r.actTime||'—'} · EP ${r.ep||'—'} · EPH ${r.eph||'—'}</div>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn-ghost" style="font-size:11px;padding:4px 8px;" onclick="nLoadRecord(${r.id})">載入</button>
+          <button style="background:none;border:1px solid #FCA5A5;border-radius:4px;padding:4px 8px;font-size:11px;color:var(--red);cursor:pointer;" onclick="nDeleteRecord(${r.id})">刪除</button>
+        </div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;">
+        <span style="background:var(--blue-bg);color:var(--blue);padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;">💧 ${r.waterMl||0}ml</span>
+        <span style="background:var(--green-bg);color:var(--green);padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;">🍯 ${r.totalKcal||0}kcal${r.hrs>0?' ('+Math.round((r.totalKcal||0)/r.hrs)+'kcal/hr)':''}</span>
+        <span style="background:var(--amber-bg);color:var(--amber);padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;">⚡ 鈉 ${r.totalSodium||0}mg${r.hrs>0?' ('+Math.round((r.totalSodium||0)/r.hrs)+'mg/hr)':''}</span>
+        ${r.feeling?`<span style="background:var(--surface2);color:var(--text2);padding:2px 8px;border-radius:20px;font-size:10px;">${r.feeling}</span>`:''}
+        ${r.gut?`<span style="background:var(--surface2);color:var(--text2);padding:2px 8px;border-radius:20px;font-size:10px;">腸胃：${r.gut}</span>`:''}
+        ${r.cramp?`<span style="background:var(--surface2);color:var(--text2);padding:2px 8px;border-radius:20px;font-size:10px;">抽筋：${r.cramp}</span>`:''}
+      </div>
+      ${r.aiAdvice?`<div style="font-size:11px;color:var(--text2);background:var(--surface2);padding:8px;border-radius:6px;white-space:pre-wrap;">${r.aiAdvice.slice(0,150)}${r.aiAdvice.length>150?'…':''}</div>`:''}
+    </div>`).join('');
+}
+
+function nDeleteRecord(id) {
+  if(!confirm('確定要刪除這筆補給記錄嗎？')) return;
+  const records = JSON.parse(localStorage.getItem('nutrition_records')||'[]').filter(r=>r.id!==id);
+  localStorage.setItem('nutrition_records', JSON.stringify(records));
+  nRenderHistory();
+}
+
+function nLoadRecord(id) {
+  const records = JSON.parse(localStorage.getItem('nutrition_records')||'[]');
+  const r = records.find(r=>r.id===id);
+  if(!r) return;
+  document.getElementById('n-date').value=r.date||'';
+  document.getElementById('n-desc').value=r.desc||'';
+  document.getElementById('n-plan-dist').value=r.planDist||'';
+  document.getElementById('n-plan-ele').value=r.planEle||'';
+  document.getElementById('n-plan-eph').value=r.planEph||'';
+  document.getElementById('n-act-dist').value=r.actDist||'';
+  document.getElementById('n-act-ele').value=r.actEle||'';
+  document.getElementById('n-act-time').value=r.actTime||'';
+  document.getElementById('n-act-tss').value=r.actTss||'';
+  document.getElementById('n-water-btl').value=r.waterMl?r.waterMl/500:'';
+  document.getElementById('n-raceon').value=r.raceOn||'';
+  document.getElementById('n-saltstick').value=r.salt||'';
+  document.getElementById('n-other').value=r.otherSupps||'';
+  document.getElementById('n-feeling-text').value=r.feelingText||'';
+  document.getElementById('n-ai-advice').value=r.aiAdvice||'';
+  nGels=r.gels?JSON.parse(JSON.stringify(r.gels)):[];
+  nGelId=nGels.length>0?Math.max(...nGels.map(g=>g.id))+1:0;
+  nFeeling=r.feeling||''; nGut=r.gut||''; nCramp=r.cramp||'';
+  nRenderGels(); nCalcPlan(); nCalcActual(); nCalcNutrition();
+  window.scrollTo(0,0);
+}
+
+nRenderGels();
+nRenderHistory();
 </script>
 </body>
 </html>
