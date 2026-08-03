@@ -1230,7 +1230,7 @@ function renderCal() {
   });
   cellEl.innerHTML='';
   for(let i=0;i<dow;i++){const e=document.createElement('div');e.className='cal-cell empty';cellEl.appendChild(e);}
-  let mDist=0,mEle=0,mTss=0,mTrain=0;
+  let mDist=0,mEle=0,mTss=0,mTrain=0,mPlanned=0,mCompleted=0;
   for(let day=1;day<=dim;day++){
     const cell=document.createElement('div'); cell.className='cal-cell';
     const isToday=today.getFullYear()===calY&&today.getMonth()===calM&&today.getDate()===day;
@@ -1292,6 +1292,18 @@ function renderCal() {
           if(wk.tss) h+=`<div class="cal-tss">TSS ${wk.tss}</div>`;
         }
         mDist+=wk.dist||0; mEle+=wk.ele||0; mTss+=wk.tss||0; mTrain++;
+        // Count planned vs completed for monthly compliance
+        realSessions.forEach(s=>{
+          const sessPlanned = s.planDist>0||s.planEle>0||s.planTss>0||
+            (s.planDesc&&s.planDesc.trim())||(s.planPace&&s.planPace.trim());
+          const sessActual = s.dist>0||s.ele>0||s.tss>0||
+            (s.time&&s.time.trim()&&s.time!=='0:00:00')||
+            (s.pace&&s.pace.trim());
+          if(sessPlanned) {
+            mPlanned++;
+            if(sessActual) mCompleted++;
+          }
+        });
       } else { h+=`<div class="cal-rest">Rest</div>`; }
     }
     const dateStr=`${calY}/${calM+1}/${day}`;
@@ -1306,7 +1318,8 @@ function renderCal() {
     <div class="ms-card"><div class="ms-val">${mDist.toFixed(1)}<span style="font-size:11px;font-weight:400;">km</span></div><div class="ms-lbl">月總距離</div></div>
     <div class="ms-card"><div class="ms-val">${mEle}<span style="font-size:11px;font-weight:400;">m</span></div><div class="ms-lbl">月總爬升</div></div>
     <div class="ms-card"><div class="ms-val">${mTss}</div><div class="ms-lbl">月總TSS</div></div>
-    <div class="ms-card"><div class="ms-val">${mTrain}<span style="font-size:11px;font-weight:400;">天</span></div><div class="ms-lbl">訓練天數</div></div>`;
+    <div class="ms-card"><div class="ms-val">${mTrain}<span style="font-size:11px;font-weight:400;">天</span></div><div class="ms-lbl">訓練天數</div></div>
+    <div class="ms-card"><div class="ms-val" style="color:${mPlanned>0?(mCompleted/mPlanned>=0.9?'var(--green)':mCompleted/mPlanned>=0.7?'var(--amber)':'var(--red)'):'var(--text2)'}">${mPlanned>0?Math.round(mCompleted/mPlanned*100)+'%':'—'}</div><div class="ms-lbl">課表完食率<br><span style="font-size:9px;color:var(--text3);">${mCompleted}/${mPlanned} 堂</span></div></div>`;
 }
 
 // ════════════════════════════════════════
