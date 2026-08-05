@@ -2720,21 +2720,56 @@ function exportMonthReport(targetYear, targetMonth) {
     </tr>`;
   }).join('');
 
-  const weeksSummaryHTML = allWeeks.map(w=>`
-    <div class="ai-box" style="margin-bottom:12px;">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+  const weeksSummaryHTML = allWeeks.map(w=>{
+    const T = w.total||{};
+    const mon = getMondayOfWeek(w.startDate);
+    const sun = mon ? new Date(mon) : null;
+    if(sun) sun.setDate(sun.getDate()+6);
+    const dateRange = mon ? `${mon.getMonth()+1}/${mon.getDate()} ～ ${sun.getMonth()+1}/${sun.getDate()}` : '';
+    const compColor = (T.comp||0)>=90?'#2A6B35':(T.comp||0)>=70?'#8A5508':'#A02828';
+    const hrvColor = (T.avgHrv||0)>=75?'#2A6B35':(T.avgHrv||0)>=60?'#8A5508':'#A02828';
+    return `
+    <div style="background:#fff;border:1px solid #E0DBD4;border-radius:14px;padding:18px 20px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
+      <!-- 週次標題 -->
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #F0EDE8;">
         <div>
-          <div style="font-size:14px;font-weight:700;">${w.label} <span style="font-size:11px;font-weight:400;color:#6A6560;">${w.phase||''}</span></div>
-          <div style="font-size:11px;color:#A09C97;margin-top:2px;">${w.startDate||''}</div>
+          <div style="font-size:15px;font-weight:800;letter-spacing:-0.3px;">${w.label} <span style="font-size:12px;font-weight:500;color:#A09C97;background:#F5F3EF;padding:2px 8px;border-radius:20px;margin-left:4px;">${w.phase||''}</span></div>
+          <div style="font-size:11px;color:#A09C97;margin-top:4px;">${dateRange}</div>
         </div>
-        <div style="text-align:right;font-size:12px;color:#6A6560;">
-          ${w.total?.dist||0}km · ${w.total?.ele||0}m↑ · TSS ${w.total?.tss||0}
+        ${w.goal?`<div style="font-size:11px;color:#1A5599;background:#E4EEF8;padding:4px 10px;border-radius:8px;max-width:200px;text-align:right;">📌 ${w.goal}</div>`:''}
+      </div>
+      <!-- 數據小卡 -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;">
+        <div style="background:#F5F3EF;border-radius:10px;padding:10px;text-align:center;">
+          <div style="font-size:16px;font-weight:700;">${T.dist||0}<span style="font-size:11px;font-weight:400;color:#6A6560;">km</span></div>
+          <div style="font-size:10px;color:#A09C97;margin-top:2px;">距離</div>
+        </div>
+        <div style="background:#F5F3EF;border-radius:10px;padding:10px;text-align:center;">
+          <div style="font-size:16px;font-weight:700;">${T.ele||0}<span style="font-size:11px;font-weight:400;color:#6A6560;">m</span></div>
+          <div style="font-size:10px;color:#A09C97;margin-top:2px;">爬升</div>
+        </div>
+        <div style="background:#F5F3EF;border-radius:10px;padding:10px;text-align:center;">
+          <div style="font-size:16px;font-weight:700;color:${hrvColor};">${T.avgHrv||0}</div>
+          <div style="font-size:10px;color:#A09C97;margin-top:2px;">HRV</div>
+        </div>
+        <div style="background:#F5F3EF;border-radius:10px;padding:10px;text-align:center;">
+          <div style="font-size:16px;font-weight:700;color:${compColor};">${T.comp||0}%</div>
+          <div style="font-size:10px;color:#A09C97;margin-top:2px;">完食率</div>
         </div>
       </div>
-      ${w.goal?`<div style="font-size:12px;color:#6A6560;margin-bottom:8px;">📌 ${w.goal}</div>`:''}
-      ${w.aiAnalysis?`<div style="font-size:12px;color:#1A1714;line-height:1.7;border-top:1px solid #F0EDE8;padding-top:8px;margin-top:8px;">${w.aiAnalysis.slice(0,300)}${w.aiAnalysis.length>300?'…':''}</div>`:''}
-      ${w.coachFeedback?`<div style="font-size:12px;color:#8A5508;background:#FDF2D8;border-radius:8px;padding:8px 10px;margin-top:8px;line-height:1.6;">🏅 ${w.coachFeedback.slice(0,200)}${w.coachFeedback.length>200?'…':''}</div>`:''}
-    </div>`).join('');
+      <!-- AI 分析 -->
+      ${w.aiAnalysis?`
+      <div style="margin-bottom:10px;">
+        <div style="font-size:10px;font-weight:700;color:#A09C97;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">✦ AI 分析</div>
+        <div style="font-size:12px;color:#1A1714;line-height:1.8;white-space:pre-line;">${w.aiAnalysis.slice(0,400)}${w.aiAnalysis.length>400?`<span style="color:#A09C97;">…（完整內容見週報）</span>`:''}</div>
+      </div>`:''}
+      <!-- 教練反饋 -->
+      ${w.coachFeedback?`
+      <div style="background:#FDF2D8;border-radius:10px;padding:12px 14px;border-left:3px solid #D4A040;">
+        <div style="font-size:10px;font-weight:700;color:#8A5508;letter-spacing:.06em;margin-bottom:6px;">🏅 教練反饋</div>
+        <div style="font-size:12px;color:#5A3A08;line-height:1.8;white-space:pre-line;">${w.coachFeedback}</div>
+      </div>`:''}
+    </div>`}).join('');
 
   const html = `<!DOCTYPE html><html lang="zh-TW"><head>${reportBaseStyle()}
   <title>${monthLabel} 訓練月報 · 姸樂</title></head><body><div class="wrap">
