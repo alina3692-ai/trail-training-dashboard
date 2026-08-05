@@ -324,8 +324,8 @@
     <button class="btn-ghost" onclick="askAI('race')">備賽狀態評估 ↗</button>
     <button class="btn-ghost" onclick="askAI('next')">下週建議 ↗</button>
     <button class="btn-ghost" onclick="sendToAI()">✦ AI 分析 ↗</button>
-    <button class="btn-ghost" onclick="exportWeekReport()" style="border-color:var(--green);color:var(--green);">📤 匯出週報</button>
-    <button class="btn-ghost" onclick="exportMonthReport()" style="border-color:var(--blue);color:var(--blue);">📤 匯出月報</button>
+    <button class="btn-ghost" onclick="openWeekExportModal()" style="border-color:var(--green);color:var(--green);">📤 匯出週報</button>
+    <button class="btn-ghost" onclick="openMonthExportModal()" style="border-color:var(--blue);color:var(--blue);">📤 匯出月報</button>
   </div>
 
   <div class="divider"></div>
@@ -722,6 +722,32 @@
     <div id="n-history-list"><div style="font-size:12px;color:var(--text3);">尚無記錄</div></div>
   </div>
 
+</div>
+
+<!-- EXPORT WEEK MODAL -->
+<div class="modal-overlay" id="export-week-modal" onclick="closeExportModal('export-week-modal',event)">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-header">
+      <div><div class="modal-title">📤 匯出週報</div><div class="modal-date">選擇要匯出的週次</div></div>
+      <button class="modal-close" onclick="document.getElementById('export-week-modal').classList.remove('open')">✕</button>
+    </div>
+    <div id="export-week-list" style="max-height:360px;overflow-y:auto;">
+      <div style="font-size:12px;color:var(--text3);">載入中...</div>
+    </div>
+  </div>
+</div>
+
+<!-- EXPORT MONTH MODAL -->
+<div class="modal-overlay" id="export-month-modal" onclick="closeExportModal('export-month-modal',event)">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-header">
+      <div><div class="modal-title">📤 匯出月報</div><div class="modal-date">選擇要匯出的月份</div></div>
+      <button class="modal-close" onclick="document.getElementById('export-month-modal').classList.remove('open')">✕</button>
+    </div>
+    <div id="export-month-list" style="max-height:360px;overflow-y:auto;">
+      <div style="font-size:12px;color:var(--text3);">載入中...</div>
+    </div>
+  </div>
 </div>
 
 <!-- MODAL -->
@@ -2408,6 +2434,60 @@ function nLoadRecord(id) {
 nRenderGels();
 nRenderHistory();
 
+function closeExportModal(id, e) {
+  if(e.target.id===id) document.getElementById(id).classList.remove('open');
+}
+
+function openWeekExportModal() {
+  if(state.weeks.length===0) { alert('尚無週次數據'); return; }
+  const sorted = [...state.weeks].filter(w=>w.startDate).sort((a,b)=>
+    getMondayOfWeek(b.startDate)-getMondayOfWeek(a.startDate)
+  );
+  const list = document.getElementById('export-week-list');
+  list.innerHTML = sorted.map(w=>{
+    const T = w.total||{};
+    const mon = getMondayOfWeek(w.startDate);
+    const sun = new Date(mon); sun.setDate(sun.getDate()+6);
+    const dateRange = mon ? `${mon.getMonth()+1}/${mon.getDate()} ～ ${sun.getMonth()+1}/${sun.getDate()}` : '';
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);">
+      <div>
+        <div style="font-size:13px;font-weight:700;">${w.label} <span style="font-size:11px;font-weight:400;color:var(--text3);">${w.phase||''}</span></div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px;">${dateRange} · ${T.dist||0}km · ${T.ele||0}m↑</div>
+      </div>
+      <button class="btn-ghost" style="font-size:12px;padding:6px 12px;" onclick="exportWeekReport('${w.label}');document.getElementById('export-week-modal').classList.remove('open');">匯出</button>
+    </div>`;
+  }).join('');
+  document.getElementById('export-week-modal').classList.add('open');
+}
+
+function openMonthExportModal() {
+  if(state.weeks.length===0) { alert('尚無週次數據'); return; }
+  const monthMap = {};
+  state.weeks.forEach(w=>{
+    if(!w.startDate) return;
+    const mon = getMondayOfWeek(w.startDate);
+    if(!mon) return;
+    const key = `${mon.getFullYear()}-${String(mon.getMonth()+1).padStart(2,'0')}`;
+    if(!monthMap[key]) monthMap[key] = { year: mon.getFullYear(), month: mon.getMonth(), label: `${mon.getFullYear()}年${mon.getMonth()+1}月`, weeks: [] };
+    monthMap[key].weeks.push(w);
+  });
+  const months = Object.values(monthMap).sort((a,b)=>b.year!==a.year?b.year-a.year:b.month-a.month);
+  const list = document.getElementById('export-month-list');
+  list.innerHTML = months.map(m=>{
+    const totDist = m.weeks.reduce((s,w)=>s+(w.total?.dist||0),0).toFixed(1);
+    const totEle = m.weeks.reduce((s,w)=>s+(w.total?.ele||0),0);
+    const totTss = m.weeks.reduce((s,w)=>s+(w.total?.tss||0),0);
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);">
+      <div>
+        <div style="font-size:13px;font-weight:700;">${m.label}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px;">${m.weeks.length}週 · ${totDist}km · ${totEle}m↑ · TSS ${totTss}</div>
+      </div>
+      <button class="btn-ghost" style="font-size:12px;padding:6px 12px;" onclick="exportMonthReport(${m.year},${m.month});document.getElementById('export-month-modal').classList.remove('open');">匯出</button>
+    </div>`;
+  }).join('');
+  document.getElementById('export-month-modal').classList.add('open');
+}
+
 // ══════════════════════════════════════════════
 // REPORT EXPORT
 // ══════════════════════════════════════════════
@@ -2473,8 +2553,8 @@ function getCountdown() {
   return Math.ceil((race - today) / 86400000);
 }
 
-function exportWeekReport() {
-  const w = getCurrentWeek();
+function exportWeekReport(weekLabel) {
+  const w = weekLabel ? state.weeks.find(x=>x.label===weekLabel) : getCurrentWeek();
   if(!w) { alert('請先輸入並儲存週次數據'); return; }
   const T = w.total || {};
 
@@ -2602,16 +2682,18 @@ function exportWeekReport() {
   a.click();
 }
 
-function exportMonthReport() {
+function exportMonthReport(targetYear, targetMonth) {
   if(state.weeks.length===0) { alert('請先輸入週次數據'); return; }
   const now = new Date();
+  const year = targetYear !== undefined ? targetYear : now.getFullYear();
+  const month = targetMonth !== undefined ? targetMonth : now.getMonth();
   const monthWeeks = state.weeks.filter(w=>{
     if(!w.startDate) return false;
     const m = getMondayOfWeek(w.startDate);
-    return m && m.getMonth()===now.getMonth() && m.getFullYear()===now.getFullYear();
+    return m && m.getMonth()===month && m.getFullYear()===year;
   });
   const allWeeks = monthWeeks.length>0 ? monthWeeks : state.weeks;
-  const monthLabel = `${now.getFullYear()}年${now.getMonth()+1}月`;
+  const monthLabel = `${year}年${month+1}月`;
 
   const totDist = allWeeks.reduce((s,w)=>s+(w.total?.dist||0),0).toFixed(1);
   const totEle = allWeeks.reduce((s,w)=>s+(w.total?.ele||0),0);
